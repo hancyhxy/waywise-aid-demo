@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#102a2e">
+  <meta name="description" content="A mobile prototype for personalised commute decisions under crowding and disruption.">
+  <title>Waywise — Commute with confidence</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="demo-shell">
+    <aside class="demo-notes" aria-label="Prototype notes">
+      <p class="eyebrow">AID CONCEPT DEMO</p>
+      <h1>Decide before<br>you commit.</h1>
+      <p>Waywise compares the real consequences of taking, waiting, or switching when a familiar commute changes.</p>
+      <div class="research-note">
+        <span>Built from interview evidence</span>
+        <strong>Time · seating · boarding · confidence</strong>
+      </div>
+      <div class="scenario-control" aria-label="Demo scenario">
+        <span>Try a scenario</span>
+        <button class="scenario active" data-scenario="disruption">Disruption</button>
+        <button class="scenario" data-scenario="normal">Normal day</button>
+        <button class="scenario" data-scenario="capacity">Full bus</button>
+      </div>
+    </aside>
+
+    <main class="phone" aria-label="Waywise mobile app prototype">
+      <div class="status-bar" aria-hidden="true"><span>8:06</span><span>● ● ●</span></div>
+
+      <section class="screen active" id="today-screen" aria-labelledby="today-label">
+        <header class="app-header">
+          <div>
+            <p class="overline">TUESDAY COMMUTE</p>
+            <h2 id="today-label">Morning, Xinyi</h2>
+          </div>
+          <button class="avatar" aria-label="Open profile">XY</button>
+        </header>
+
+        <article class="trip-summary">
+          <div class="trip-row">
+            <div>
+              <span class="place">Wollstonecraft</span>
+              <span class="time">Leave around 8:18</span>
+            </div>
+            <div class="journey-line" aria-hidden="true"><i></i><span>→</span><i></i></div>
+            <div class="align-right">
+              <span class="place">Wynyard</span>
+              <span class="time">Arrive by 8:58</span>
+            </div>
+          </div>
+          <button class="edit-trip" data-action="open-trip">Change journey</button>
+        </article>
+
+        <div class="alert-card" id="service-alert" role="status">
+          <div class="alert-icon">!</div>
+          <div>
+            <strong id="alert-title">North Shore Line disruption</strong>
+            <p id="alert-copy">Reduced frequency is increasing platform crowding. Updated 2 min ago.</p>
+          </div>
+        </div>
+
+        <section class="context-section" aria-labelledby="context-heading">
+          <div class="section-heading">
+            <div>
+              <p class="overline">WHAT MATTERS TODAY?</p>
+              <h3 id="context-heading">Tune this journey</h3>
+            </div>
+            <button class="text-button" id="reset-context">Reset</button>
+          </div>
+          <div class="chips" role="group" aria-label="Journey preferences">
+            <button class="chip active" data-pref="hurry" aria-pressed="true"><span>⌁</span> In a hurry</button>
+            <button class="chip" data-pref="seat" aria-pressed="false"><span>▱</span> Need a seat</button>
+            <button class="chip" data-pref="walk" aria-pressed="false"><span>⌂</span> Less walking</button>
+            <button class="chip" data-pref="transfer" aria-pressed="false"><span>↗</span> Avoid transfers</button>
+          </div>
+        </section>
+
+        <section class="options-section" aria-labelledby="options-heading">
+          <div class="section-heading compact">
+            <div>
+              <p class="overline">YOUR OPTIONS</p>
+              <h3 id="options-heading">What should I do?</h3>
+            </div>
+            <button class="info-button" id="open-method" aria-label="How recommendations work">?</button>
+          </div>
+          <div class="confidence-line"><span>Live recommendation</span><span><i></i> 78% confidence</span></div>
+
+          <div id="route-options" class="route-options" aria-live="polite"></div>
+        </section>
+
+        <p class="data-note">Predictions combine current services with your journey preferences. Always follow official transport advice.</p>
+      </section>
+
+      <section class="screen" id="trips-screen" aria-labelledby="trips-label">
+        <header class="app-header subpage">
+          <div><p class="overline">WEEKLY ROUTINES</p><h2 id="trips-label">My week</h2></div>
+          <button class="round-button" id="add-routine" aria-label="Add routine">+</button>
+        </header>
+
+        <div class="week-picker" role="tablist" aria-label="Choose a day">
+          <button class="day active" role="tab" aria-selected="true" data-day="mon"><small>M</small><strong>14</strong><i class="work"></i></button>
+          <button class="day" role="tab" aria-selected="false" data-day="tue"><small>T</small><strong>15</strong><i class="uni"></i></button>
+          <button class="day" role="tab" aria-selected="false" data-day="wed"><small>W</small><strong>16</strong><i class="work"></i></button>
+          <button class="day" role="tab" aria-selected="false" data-day="thu"><small>T</small><strong>17</strong><i class="uni"></i></button>
+          <button class="day" role="tab" aria-selected="false" data-day="fri"><small>F</small><strong>18</strong><i class="home"></i></button>
+          <button class="day" role="tab" aria-selected="false" data-day="sat"><small>S</small><strong>19</strong><i class="personal"></i></button>
+          <button class="day" role="tab" aria-selected="false" data-day="sun"><small>S</small><strong>20</strong><i></i></button>
+        </div>
+
+        <article class="day-plan" id="day-plan" aria-live="polite"></article>
+
+        <div class="section-heading routine-heading">
+          <div><p class="overline">SAVED TEMPLATES</p><h3>Reuse a routine</h3></div>
+          <button class="text-button" id="edit-week">Edit week</button>
+        </div>
+        <article class="saved-trip featured">
+          <span class="saved-icon train">W</span>
+          <div><strong>Office day</strong><p>Wollstonecraft → Wynyard</p><small>Out 8:15 · Return 17:30</small></div>
+          <span class="service-status good">M · W</span>
+        </article>
+        <article class="saved-trip">
+          <span class="saved-icon bus">U</span>
+          <div><strong>University day</strong><p>Home → UTS</p><small>Out 9:10 · Return 16:00</small></div>
+          <span class="service-status">T · T</span>
+        </article>
+        <article class="saved-trip">
+          <span class="saved-icon home">H</span>
+          <div><strong>Remote day</strong><p>No commute alerts</p><small>Notifications paused</small></div>
+          <span class="service-status">F</span>
+        </article>
+      </section>
+
+      <section class="screen" id="prefs-screen" aria-labelledby="prefs-label">
+        <header class="app-header subpage">
+          <div><p class="overline">PERSONALISATION</p><h2 id="prefs-label">My priorities</h2></div>
+        </header>
+        <p class="intro">These are your defaults. You can still tune each journey on the Today screen.</p>
+        <div class="preference-card">
+          <label for="time-slider"><span><strong>Arrival time</strong><small>Usually more important</small></span><output id="time-value">8</output></label>
+          <input id="time-slider" type="range" min="1" max="10" value="8">
+        </div>
+        <div class="preference-card">
+          <label for="seat-slider"><span><strong>Chance of a seat</strong><small>Important on journeys over 30 min</small></span><output id="seat-value">6</output></label>
+          <input id="seat-slider" type="range" min="1" max="10" value="6">
+        </div>
+        <div class="preference-card">
+          <label for="reliability-slider"><span><strong>Reliability</strong><small>Avoid uncertain connections</small></span><output id="reliability-value">9</output></label>
+          <input id="reliability-slider" type="range" min="1" max="10" value="9">
+        </div>
+        <div class="toggle-card"><span><strong>Learn from my choices</strong><small>Adjust defaults, never today's choice</small></span><button class="toggle active" aria-pressed="true"><i></i></button></div>
+        <div class="toggle-card"><span><strong>Actionable alerts only</strong><small>Notify me only when switching may help</small></span><button class="toggle active" aria-pressed="true"><i></i></button></div>
+      </section>
+
+      <nav class="bottom-nav" aria-label="Primary navigation">
+        <button class="nav-item active" data-screen="today"><span>⌖</span><small>Today</small></button>
+        <button class="nav-item" data-screen="trips"><span>⇄</span><small>Trips</small></button>
+        <button class="nav-item" data-screen="prefs"><span>≋</span><small>Priorities</small></button>
+      </nav>
+
+      <div class="sheet-backdrop" id="sheet-backdrop"></div>
+      <section class="bottom-sheet" id="method-sheet" role="dialog" aria-modal="true" aria-labelledby="method-title">
+        <button class="sheet-handle" data-action="close-sheet" aria-label="Close"></button>
+        <p class="overline">WHY THIS RECOMMENDATION?</p>
+        <h3 id="method-title">Useful detail, not a black box.</h3>
+        <div class="method-item"><span>1</span><div><strong>Current conditions</strong><p>Delay, frequency, capacity and last update.</p></div></div>
+        <div class="method-item"><span>2</span><div><strong>Your context</strong><p>Today's quick choices override your normal defaults.</p></div></div>
+        <div class="method-item"><span>3</span><div><strong>Honest confidence</strong><p>We show a range when the network is unstable.</p></div></div>
+        <button class="primary full" data-action="close-sheet">Got it</button>
+      </section>
+
+      <section class="decision-toast" id="decision-toast" role="status" aria-live="polite">
+        <span>✓</span><div><strong id="toast-title">Decision saved</strong><p id="toast-copy">We'll keep an eye on your journey.</p></div>
+      </section>
+    </main>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>
