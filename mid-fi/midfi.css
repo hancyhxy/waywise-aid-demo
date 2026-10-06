@@ -1,57 +1,73 @@
-/* Mid-fidelity skin over the v2 iteration: same content and interactions.
-   Greyscale + one blue accent; red/green only for status meaning. No brand colour, shadows or gradients. */
-:root { --ink:#222; --deep:#222; --paper:#f4f4f4; --white:#fff; --mint:#e6e6e6; --mint-dark:#2f5fd0;
-  --coral:#999; --yellow:#e6e6e6; --blue:#e6e6e6; --muted:#6b6b6b; --line:#d0d0d0; --shadow:none; --accent:#2f5fd0; }
-*,*::before,*::after { font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif !important; box-shadow:none !important; letter-spacing:normal !important; }
-html,body,.demo-shell { background:#e9e9e9 !important; }
+/* Mid-fidelity skin over v1: same layout, content and interactions.
+   Greyscale, system font, one blue accent for primary action/selection,
+   one muted red/green for status meaning only. No shadows, gradients or decorative colour. */
+:root {
+  --ink:#222; --deep:#222; --paper:#f4f4f4; --white:#fff;
+  --mint:#e6e6e6; --mint-dark:#2f5fd0; --coral:#999; --yellow:#e6e6e6; --blue:#e6e6e6;
+  --muted:#6b6b6b; --line:#d0d0d0; --shadow:none; --accent:#2f5fd0;
+}
+*,*::before,*::after { font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif !important; box-shadow:none !important; text-shadow:none !important; letter-spacing:normal !important; }
+html,body { background:#e9e9e9; }
+.demo-shell { background:#e9e9e9 !important; }
 .demo-notes h1 { font-size:44px; font-weight:700; line-height:1.1; }
-.overline,.eyebrow,.overline.light { color:#6b6b6b !important; }
+.demo-notes small { display:block; margin-top:10px; color:var(--muted); font-size:12px; line-height:1.5; }
+.demo-notes a { color:var(--accent); }
 .research-note { border-left-color:#999; background:#fff; }
+.scenario { border-color:#bbb; }
 .scenario.active { background:#222; border-color:#222; }
 .phone { border:2px solid #222; border-radius:36px; background:var(--paper); }
-.bottom-nav { background:#fff; border-top-color:var(--line); }
-.nav-item.active { color:var(--accent); }
-/* dark blocks -> neutral */
-.trip-summary,.day-plan,.plan-chip,.ride-card { background:#fff; color:var(--ink); border:1px solid var(--line); }
-.time,.plan-top small,.plan-leg small,.no-plan,.no-plan p,.plan-chip small,.plan-chip p,.ride-meta { color:var(--muted) !important; }
-.no-plan strong,.plan-leg strong,.ride-meta strong { color:var(--ink); }
+
+/* dark hero blocks -> neutral boxes */
+.trip-summary,.day-plan { background:#fff; color:var(--ink); border:1px solid var(--line); }
+.time,.plan-top small,.plan-leg small,.no-plan,.no-plan p { color:var(--muted) !important; }
+.no-plan strong,.plan-leg strong { color:var(--ink); }
 .journey-line { color:#888; } .journey-line i { border-color:#bbb; }
 .edit-trip { color:var(--accent); border-top-color:var(--line); }
-.plan-leg,button.plan-leg { border-top-color:var(--line); } .plan-leg span:first-child { color:var(--muted); }
+.plan-leg { border-top-color:var(--line); }
+.plan-leg span:first-child { color:var(--muted); }
 .plan-badge { background:#e6e6e6; }
-.plan-chip .text-button { color:var(--accent); }
-.progress { background:#e0e0e0; } .progress i { background:var(--accent); }
-/* alerts */
+
+/* alerts: grey card, status conveyed by icon + text */
 .alert-card,.alert-card.normal,.alert-card.capacity { background:#fff; border:1px solid var(--line); }
 .alert-card p,.alert-card.normal p,.alert-card.capacity p { color:var(--muted); }
-.alert-icon { background:#c0392b; } .alert-card.normal .alert-icon { background:#3a8a55; } .alert-card.capacity .alert-icon { background:#888; }
-.tip-card { background:#fff; border:1px solid var(--line); } .tip-card span { background:#888; } .tip-card p { color:var(--muted); }
-/* selection & actions */
-.chip { background:#fff; } .chip.active { background:var(--accent); border-color:var(--accent); }
-.mood { background:#fff; } .mood.active,.mood[data-mood="tired"].active,.mood[data-mood="rushing"].active { background:var(--accent); border-color:var(--accent); }
-.mood.active small { color:#dfe7fb; }
-.mood-means { color:var(--accent); }
-.because { background:#fff; border:1px solid var(--line); color:#444; }
-.primary { background:var(--accent); } .secondary,.text-button,.info-button { color:var(--accent); }
+.alert-icon { background:#c0392b; }
+.alert-card.normal .alert-icon { background:#3a8a55; }
+.alert-card.capacity .alert-icon { background:#888; }
+
+/* chips, buttons and selection use the single accent */
+.chip { background:#fff; }
+.chip.active { background:var(--accent); border-color:var(--accent); }
+.primary { background:var(--accent); }
+.secondary,.text-button,.info-button { color:var(--accent); }
 .avatar,.round-button { background:#d6d6d6; color:#222; }
-.step.active { background:#e6e6e6; } .step.active i { background:var(--accent); border-color:var(--accent); }
-.step.done i { background:#e6e6e6; border-color:#999; }
 .day.active { background:var(--accent); border-color:var(--accent); }
 .day i,.day i.work,.day i.uni,.day i.home,.day i.personal { background:#999; }
-.toggle.active { background:var(--accent); } .preference-card input { accent-color:var(--accent); }
-.rating button { background:#fff; } .rating button.active { border-color:var(--accent); background:#eef2fc; }
-.learn-card,.learned-item { background:#fff; border:1px solid var(--line); } .learned-item span { background:#555; }
-/* cards & status */
-.route-card { border-radius:12px; } .route-card.recommended { border:2px solid var(--accent); } .route-card.recommended::before { background:var(--accent); }
+.nav-item.active { color:var(--accent); }
+.toggle.active { background:var(--accent); }
+.preference-card input { accent-color:var(--accent); }
+
+/* route cards */
+.route-card { border-radius:12px; }
+.route-card.recommended { border:2px solid var(--accent); }
+.route-card.recommended::before { background:var(--accent); }
 .action-icon,.action-icon.wait,.action-icon.switch { background:#e6e6e6; border-radius:10px; }
-.metric,.ride { background:#efefef; color:#555; }
-.metric.warn,.ride.warn { background:#fbe9e7; color:#a33a2b; }
-.metric.good,.ride.good { background:#e7f3ea; color:#2f6e43; }
-.updated-pill { background:#efefef; color:#555; }
-.departure.target { border-color:var(--accent); } .your-pick { color:var(--accent); }
-.carriages .c1 { background:#cfcfcf; } .carriages .c2 { background:#9a9a9a; } .carriages .c3 { background:#555; }
-.saved-trip,.preference-card,.toggle-card,.arrive-card { background:#fff; border-color:var(--line); border-radius:12px; }
+.metric { background:#efefef; color:#555; }
+.metric.warn { background:#fbe9e7; color:#a33a2b; }
+.metric.good { background:#e7f3ea; color:#2f6e43; }
+
+/* secondary surfaces */
+.saved-trip,.saved-trip.featured,.preference-card,.toggle-card { background:#fff; border-color:var(--line); border-radius:12px; }
+.saved-icon,.saved-icon.train,.saved-icon.bus,.saved-icon.home { background:#e6e6e6; }
+.service-status,.service-status.good { background:#efefef; color:#555; }
 .preference-card output,.method-item>span { background:#e6e6e6; }
-.decision-toast { background:#222; } .decision-toast>span { background:#fff; }
+.bottom-sheet { background:#fff; }
+.decision-toast { background:#222; }
+.decision-toast>span { background:#fff; }
 .status-bar { color:#222; }
 @media (max-width:800px) { body,.demo-shell { background:var(--paper) !important; } .phone { border:0; border-radius:0; } }
+.overline,.eyebrow { color:#6b6b6b !important; }
+.bottom-nav { background:#fff; border-top-color:var(--line); }
+.overline,.eyebrow { color:#6b6b6b !important; }
+.bottom-nav { background:#fff; border-top-color:var(--line); }
+.avatar { display:grid; place-items:center; }
+.bottom-sheet:not(.open) { visibility:hidden; }
