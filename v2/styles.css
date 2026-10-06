@@ -189,7 +189,7 @@ button { color:inherit; }
 .stage-actions.inline { display:flex; gap:8px; }
 .ride-card { padding:18px 16px; border-radius:18px; background:var(--ink); color:white; }
 .overline.light { color:var(--mint); }
-.ride-card h3 { margin:4px 0 14px; font:800 20px Arial,sans-serif; text-transform:capitalize; }
+.ride-card h3 { margin:4px 0 14px; font:800 20px Arial,sans-serif; }
 .progress { height:6px; border-radius:6px; background:#315052; overflow:hidden; }
 .progress i { display:block; height:100%; background:var(--yellow); border-radius:6px; }
 .ride-meta { display:flex; justify-content:space-between; margin-top:8px; color:#b9ceca; font-size:9px; }

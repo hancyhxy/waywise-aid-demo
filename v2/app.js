@@ -192,7 +192,8 @@ function renderPlatform() {
 
 function renderBoard() {
   const d = data(), o = findOption(state.selected) || ranked()[0];
-  $("#ride-title").textContent = o.title.replace(/^(Take|Wait for|Switch to|Try|Take a)\s/i, "").replace(/^the /, "");
+  const dep = d.departures[o.id === "wait" ? 1 : 0];
+  $("#ride-title").textContent = o.id === "switch" ? o.subtitle.split(" · ")[0] : `${dep.time} ${dep.line}`;
   $("#ride-from").textContent = d.trip[0]; $("#ride-to").textContent = d.trip[1];
   $("#ride-eta").textContent = `ETA ${o.arrival}`;
   $("#ride-progress").style.width = "45%";
