@@ -72,7 +72,10 @@
               <button class="mood active" role="radio" data-mood="normal" aria-checked="true"><span>◎</span>Normal<small>balanced</small></button>
               <button class="mood" role="radio" data-mood="tired" aria-checked="false"><span>☾</span>Tired<small>comfort first</small></button>
             </div>
-            <div class="chips" role="group" aria-label="Extra needs">
+            <p class="mood-means" id="mood-means" aria-live="polite"></p>
+            <div class="chips" role="group" aria-label="What matters today">
+              <button class="chip" data-pref="seat" aria-pressed="false"><span>▱</span> Need a seat</button>
+              <button class="chip" data-pref="ontime" aria-pressed="false"><span>⏱</span> Arrive on time</button>
               <button class="chip" data-pref="bags" aria-pressed="false"><span>▣</span> Carrying bags</button>
               <button class="chip" data-pref="walk" aria-pressed="false"><span>⌂</span> Less walking</button>
               <button class="chip" data-pref="transfer" aria-pressed="false"><span>↗</span> Avoid transfers</button>
@@ -99,6 +102,7 @@
             <div class="departures" id="departures"></div>
           </section>
           <div class="tip-card" id="platform-tip"></div>
+          <button class="report-button" id="report-busy">👀 Platform busier than shown?</button>
           <div class="fallback-card" id="fallback"></div>
           <div class="stage-actions" id="platform-actions"></div>
         </div>

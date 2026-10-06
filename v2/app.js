@@ -67,10 +67,11 @@ const scenarios = {
 };
 
 const moods = {
-  rushing:{ label:"Rushing", w:{ time:2.2, seat:.3, rel:1.3, walk:.6, transfer:.6 } },
-  normal: { label:"Normal",  w:{ time:1,   seat:1,  rel:1,   walk:1,  transfer:1 } },
-  tired:  { label:"Tired",   w:{ time:.5,  seat:2.2,rel:.8,  walk:1.6,transfer:1.3 } }
+  rushing:{ label:"Rushing", prefs:["ontime"], means:"Rushing → arrive on time prioritised" },
+  normal: { label:"Normal",  prefs:[], means:"Normal → time, comfort and reliability balanced" },
+  tired:  { label:"Tired",   prefs:["seat","walk"], means:"Tired → seat and less walking prioritised" }
 };
+const prefLabels = { seat:"you need a seat", ontime:"you need to arrive on time", bags:"you're carrying bags", walk:"you want less walking", transfer:"you want to avoid transfers" };
 
 const weeklyRoutines = {
   mon:{ title:"Office day", note:"Regular Monday", badge:"WORK", legs:[
@@ -89,7 +90,7 @@ const weeklyRoutines = {
 };
 
 const state = {
-  scenario:"evening", mood:"tired", prefs:new Set(), stage:"plan", selected:null, rating:null,
+  scenario:"evening", mood:"tired", prefs:new Set(), reported:false, stage:"plan", selected:null, rating:null,
   sliders:{ time:5, seat:5, rel:5 }, learned:[], day:"mon"
 };
 
@@ -99,10 +100,12 @@ const data = () => scenarios[state.scenario];
 const findOption = id => data().options.find(o => o.id === id);
 
 function weights() {
-  const w = { ...moods[state.mood].w };
+  const w = { time:1, seat:1, rel:1, walk:1, transfer:1 };
   w.time *= state.sliders.time / 5; w.seat *= state.sliders.seat / 5; w.rel *= state.sliders.rel / 5;
   state.learned.filter(r => r.mood === state.mood).forEach(r => { w[r.key] += r.delta; });
   if (state.prefs.has("bags")) { w.walk += 1; w.transfer += 1; w.seat += .4; }
+  if (state.prefs.has("seat")) { w.seat += 1.4; w.time *= .5; }
+  if (state.prefs.has("ontime")) { w.time *= 2.2; w.seat *= .3; w.rel += .3; }
   if (state.prefs.has("walk")) w.walk += 1.4;
   if (state.prefs.has("transfer")) w.transfer += 1.6;
   return w;
@@ -113,24 +116,22 @@ function score(o) {
 }
 const ranked = () => [...data().options].sort((a,b) => score(b) - score(a));
 
+function ride(o) {
+  const mins = o.minutes - o.walk;
+  if (o.seat >= 3) return { text:`Seated ~${mins} min`, tone:"good" };
+  if (o.seat === 2) return { text:`Maybe standing ~${mins} min`, tone:"" };
+  return { text:`Standing ~${mins} min`, tone:"warn" };
+}
 function tradeoff(o, fastest) {
-  const extra = o.minutes - fastest.minutes;
   if (o.id === fastest.id) return "Fastest option";
-  const gains = [];
-  if (o.seat > fastest.seat) gains.push(o.seat >= 3 ? "a likely seat" : "more space");
-  if (o.reliability > fastest.reliability + 5) gains.push("more reliability");
-  return `+${extra} min ${gains.length ? "buys " + gains.join(" and ") : "with no clear gain"}`;
+  return `+${o.minutes - fastest.minutes} min vs fastest`;
 }
 function becauseText(best) {
-  const m = state.mood, bits = [];
-  if (m === "tired") bits.push("you're tired, so comfort and seats count more");
-  if (m === "rushing") bits.push("you're rushing, so arrival time counts most");
-  if (m === "normal") bits.push("you're balancing time, comfort and reliability");
-  if (state.prefs.has("bags")) bits.push("you're carrying bags");
-  if (state.prefs.has("walk")) bits.push("you want less walking");
-  if (state.prefs.has("transfer")) bits.push("you want to avoid transfers");
-  if (state.learned.some(r => r.mood === m)) bits.push("you asked us to remember a past choice");
-  return `<strong>${best.title}</strong> is recommended because ${bits.join(", ")}.`;
+  const bits = [...state.prefs].map(p => prefLabels[p]);
+  if (!bits.length) bits.push("it balances time, comfort and reliability");
+  if (state.learned.some(r => r.mood === state.mood)) bits.push("you asked us to remember a past choice");
+  const lead = state.mood !== "normal" ? `you're ${moods[state.mood].label.toLowerCase()}: ` : "";
+  return `<strong>${best.title}</strong> is recommended because ${lead}${bits.join(", ")}.`;
 }
 
 function renderPlan() {
@@ -156,7 +157,7 @@ function renderPlan() {
           <span class="metric">${o.transfers ? `${o.transfers} transfer` : "Direct"}</span>
           <span class="metric">${o.reliability}% on time</span>
         </div>
-        <p class="tradeoff">${tradeoff(o, fastest)}</p>
+        <p class="ride-line"><span class="ride ${ride(o).tone}">${ride(o).text}</span><span class="tradeoff">${tradeoff(o, fastest)}</span></p>
       </div>
       <div class="route-time"><strong>${o.arrival}</strong><small>${o.minutes} min total</small></div>
       <div class="route-actions">
@@ -176,7 +177,12 @@ function renderPlatform() {
       <div class="carriages" aria-label="Crowding by carriage">${dep.carriages.map(c => `<i class="c${c}"></i>`).join("")}</div>
       <span class="metric ${dep.tone}">${dep.status}</span>${i===target && o.id!=="switch" ? `<span class="your-pick">Your pick</span>` : ""}
     </article>`).join("");
-  $("#platform-tip").innerHTML = `<span>i</span><p>${d.tip}</p>`;
+  const conf = d.confidence - (state.reported ? 20 : 0);
+  $("#platform-updated").textContent = state.reported ? `Confidence ${conf}% · your report` : "Updated 30 s ago";
+  $("#platform-tip").innerHTML = state.reported
+    ? `<span>!</span><p>Thanks, Alex. The ${d.departures[0].time} is likely fuller than predicted, so confidence dropped to ${conf}%. ${o.id === "take" ? `Waiting for the ${d.departures[1].time} is the safer choice.` : `Your plan to wait still looks right.`}</p>`
+    : `<span>i</span><p>${d.tip}</p>`;
+  $("#report-busy").hidden = state.reported;
   $("#fallback").innerHTML = `<p class="overline">BACKUP PLAN</p><p>${d.fallback}</p>`;
   const primary = o.id === "wait" ? "I'm waiting for this one" : o.id === "switch" ? "Head to the alternative" : "I'm boarding";
   const alt = o.id === "take" ? `<button class="secondary" data-switch="wait">Too full — I'll wait</button>`
@@ -255,11 +261,16 @@ function render() {
   renderLearned();
 }
 function setScenario(name) {
-  state.scenario = name; state.selected = null; state.rating = null;
+  state.scenario = name; state.selected = null; state.rating = null; state.reported = false;
   $$("[data-scenario]").forEach(b => b.classList.toggle("active", b.dataset.scenario === name));
 }
+function syncChips() {
+  $$(".chip").forEach(b => { const on = state.prefs.has(b.dataset.pref); b.classList.toggle("active", on); b.setAttribute("aria-pressed", String(on)); });
+  const preset = moods[state.mood].prefs, same = preset.length === state.prefs.size && preset.every(p => state.prefs.has(p));
+  $("#mood-means").textContent = same ? moods[state.mood].means : `${moods[state.mood].label} · adjusted by you`;
+}
 function setMood(m) {
-  state.mood = m;
+  state.mood = m; state.prefs = new Set(moods[m].prefs); syncChips();
   $$(".mood").forEach(b => { const on = b.dataset.mood === m; b.classList.toggle("active", on); b.setAttribute("aria-checked", String(on)); });
 }
 function toast(title, copy) {
@@ -288,11 +299,10 @@ function closeSheet() { $("#sheet-backdrop").classList.remove("open"); $("#metho
 $$(".mood").forEach(b => b.addEventListener("click", () => { setMood(b.dataset.mood); render(); }));
 $$(".chip").forEach(b => b.addEventListener("click", () => {
   const p = b.dataset.pref; state.prefs.has(p) ? state.prefs.delete(p) : state.prefs.add(p);
-  b.classList.toggle("active", state.prefs.has(p)); b.setAttribute("aria-pressed", String(state.prefs.has(p))); render();
+  syncChips(); render();
 }));
 $("#reset-context").addEventListener("click", () => {
-  state.prefs = new Set(); setMood("normal");
-  $$(".chip").forEach(b => { b.classList.remove("active"); b.setAttribute("aria-pressed","false"); }); render();
+  setMood("normal"); render();
 });
 $$("[data-scenario]").forEach(b => b.addEventListener("click", () => { setScenario(b.dataset.scenario); setStage("plan"); goScreen("today"); }));
 $$(".step").forEach(b => b.addEventListener("click", () => setStage(b.dataset.stage)));
@@ -311,7 +321,8 @@ $("#learn-yes").addEventListener("click", () => {
   $("#learn-card").hidden = true; renderLearned();
 });
 $("#learn-no").addEventListener("click", () => { $("#learn-card").hidden = true; toast("Nothing changed", "Your settings stay the same."); });
-$("#restart").addEventListener("click", () => { state.selected = null; state.rating = null; setStage("plan"); });
+$("#report-busy").addEventListener("click", () => { state.reported = true; renderPlatform(); toast("Report sent", "Thanks. This helps other commuters too."); });
+$("#restart").addEventListener("click", () => { state.selected = null; state.rating = null; state.reported = false; setStage("plan"); });
 $("#learned-list").addEventListener("click", e => {
   const f = e.target.closest("[data-forget]"); if (!f) return;
   state.learned.splice(Number(f.dataset.forget), 1); render();
