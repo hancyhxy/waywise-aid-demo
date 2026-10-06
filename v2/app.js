@@ -89,7 +89,7 @@ const weeklyRoutines = {
 };
 
 const state = {
-  scenario:"disruption", mood:"normal", prefs:new Set(), stage:"plan", selected:null, rating:null,
+  scenario:"evening", mood:"tired", prefs:new Set(), stage:"plan", selected:null, rating:null,
   sliders:{ time:5, seat:5, rel:5 }, learned:[], day:"mon"
 };
 
@@ -161,7 +161,7 @@ function renderPlan() {
       <div class="route-time"><strong>${o.arrival}</strong><small>${o.minutes} min total</small></div>
       <div class="route-actions">
         <button class="primary" data-choose="${o.id}">${o.id===best.id ? "Go with this" : "Choose"}</button>
-        <button class="secondary" data-detail="${o.id}">Why?</button>
+        <button class="secondary" data-detail="${o.id}">Why this?</button>
       </div>
     </article>`).join("");
 }
@@ -241,7 +241,7 @@ function setStage(stage) {
   $$(".step").forEach((b,i) => { b.classList.toggle("active", i === idx); b.classList.toggle("done", i < idx); });
   $$(".stage").forEach(s => s.classList.toggle("active", s.id === `stage-${stage}`));
   render();
-  $("#today-screen").scrollTop = 0;
+  $("#today-screen").scrollTop = 0; $(".phone").scrollTop = 0; window.scrollTo(0,0);
 }
 function goScreen(name) {
   $$(".nav-item").forEach(b => b.classList.toggle("active", b.dataset.screen === name));
@@ -295,12 +295,6 @@ $("#reset-context").addEventListener("click", () => {
   $$(".chip").forEach(b => { b.classList.remove("active"); b.setAttribute("aria-pressed","false"); }); render();
 });
 $$("[data-scenario]").forEach(b => b.addEventListener("click", () => { setScenario(b.dataset.scenario); setStage("plan"); goScreen("today"); }));
-$$("[data-story]").forEach(b => b.addEventListener("click", () => {
-  const tired = b.dataset.story === "tired";
-  setScenario(tired ? "evening" : "disruption"); setMood(tired ? "tired" : "rushing");
-  $$("[data-story]").forEach(x => x.classList.toggle("active", x === b));
-  setStage("plan"); goScreen("today");
-}));
 $$(".step").forEach(b => b.addEventListener("click", () => setStage(b.dataset.stage)));
 $("#today-screen").addEventListener("click", e => {
   const choose = e.target.closest("[data-choose]"), detail = e.target.closest("[data-detail]");
@@ -343,12 +337,12 @@ $("#day-plan").addEventListener("click", e => {
 });
 $("#add-routine").addEventListener("click", () => toast("Routine editor", "Not in this prototype."));
 
-// URL params for screenshots: ?story=tired|rushing&scenario=…&mood=…&stage=…&screen=…&rate=1-3
+// URL params for screenshots: ?scenario=…&mood=…&stage=…&screen=…&rate=1-3
 const q = new URLSearchParams(location.search);
-if (q.get("story")) $(`[data-story="${q.get("story")}"]`)?.click();
 if (scenarios[q.get("scenario")]) setScenario(q.get("scenario"));
 if (moods[q.get("mood")]) setMood(q.get("mood"));
 if (q.get("rate")) state.rating = Number(q.get("rate"));
+setMood(state.mood);
 renderWeek();
 setStage(["plan","platform","board","arrive"].includes(q.get("stage")) ? q.get("stage") : "plan");
 if (["today","trips","prefs"].includes(q.get("screen"))) goScreen(q.get("screen"));
