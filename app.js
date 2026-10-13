@@ -145,10 +145,15 @@ $("#reset-context").addEventListener("click",()=>{
   $$('.chip').forEach(b=>{b.classList.remove('active');b.setAttribute('aria-pressed','false');});
   render();
 });
-$$('.scenario').forEach(button=>button.addEventListener('click',()=>{
-  state.scenario=button.dataset.scenario;
-  $$('.scenario').forEach(b=>b.classList.toggle('active',b===button));
+function setScenario(id){
+  if(!scenarios[id]) return;
+  state.scenario=id;
+  try{localStorage.setItem('waywise-scenario',id);}catch(e){}
+  $$('.scenario').forEach(b=>{const on=b.dataset.scenario===id;b.classList.toggle('active',on);b.setAttribute('aria-pressed',String(on));});
   render();
+}
+$$('.scenario').forEach(button=>button.addEventListener('click',()=>{
+  setScenario(button.dataset.scenario);
 }));
 $("#route-options").addEventListener("click",event=>{
   const choose=event.target.closest('[data-choose]');
@@ -197,5 +202,7 @@ if(weeklyRoutines[requestedDay]){
   state.day=requestedDay;
   $$('.day').forEach(b=>{const active=b.dataset.day===requestedDay;b.classList.toggle('active',active);b.setAttribute('aria-selected',String(active));});
 }
-render();
+let savedScenario=null;
+try{savedScenario=localStorage.getItem('waywise-scenario');}catch(e){}
+setScenario(scenarios[demoParams.get('scenario')]?demoParams.get('scenario'):(scenarios[savedScenario]?savedScenario:state.scenario));
 renderWeeklyRoutine();

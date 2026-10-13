@@ -138,3 +138,7 @@ button { color:inherit; }
   .status-bar { padding-top:max(0px,env(safe-area-inset-top)); }
 }
 @media (prefers-reduced-motion:reduce) { *,*::before,*::after { scroll-behavior:auto!important; transition:none!important; animation:none!important; } }
+
+.demo-scenario-card>span strong,.demo-scenario-card>span small { display:block; }
+.scenario-options { display:flex; flex-wrap:wrap; gap:6px; margin-top:12px; }
+.scenario-options .scenario { padding:7px 11px; font-size:11px; }

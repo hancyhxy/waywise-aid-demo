@@ -305,7 +305,7 @@ $$(".chip").forEach(b => b.addEventListener("click", () => {
 $("#reset-context").addEventListener("click", () => {
   setMood("normal"); render();
 });
-$$("[data-scenario]").forEach(b => b.addEventListener("click", () => { setScenario(b.dataset.scenario); setStage("plan"); goScreen("today"); }));
+$$("[data-scenario]").forEach(b => b.addEventListener("click", () => { try { localStorage.setItem("waywise-v2-scenario", b.dataset.scenario); } catch (e) {} setScenario(b.dataset.scenario); setStage("plan"); goScreen("today"); }));
 $$(".step").forEach(b => b.addEventListener("click", () => setStage(b.dataset.stage)));
 $("#today-screen").addEventListener("click", e => {
   const choose = e.target.closest("[data-choose]"), detail = e.target.closest("[data-detail]");
@@ -351,6 +351,8 @@ $("#add-routine").addEventListener("click", () => toast("Routine editor", "Not i
 
 // URL params for screenshots: ?scenario=…&mood=…&stage=…&screen=…&rate=1-3
 const q = new URLSearchParams(location.search);
+let savedScenario = null; try { savedScenario = localStorage.getItem("waywise-v2-scenario"); } catch (e) {}
+if (scenarios[savedScenario]) setScenario(savedScenario);
 if (scenarios[q.get("scenario")]) setScenario(q.get("scenario"));
 if (moods[q.get("mood")]) setMood(q.get("mood"));
 if (q.get("rate")) state.rating = Number(q.get("rate"));
