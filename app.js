@@ -124,7 +124,12 @@ function openSheet(title, copy) {
 function closeSheet() {
   $("#sheet-backdrop").classList.remove("open");
   $("#method-sheet").classList.remove("open");
+  $("#scenario-sheet").classList.remove("open");
 }
+$("#open-scenarios").addEventListener("click",()=>{
+  $("#sheet-backdrop").classList.add("open");
+  $("#scenario-sheet").classList.add("open");
+});
 function showToast(option) {
   state.selected=option.id;
   $("#toast-title").textContent = `${option.title} saved`;
@@ -153,7 +158,7 @@ function setScenario(id){
   render();
 }
 $$('.scenario').forEach(button=>button.addEventListener('click',()=>{
-  setScenario(button.dataset.scenario);
+  setScenario(button.dataset.scenario);closeSheet();
 }));
 $("#route-options").addEventListener("click",event=>{
   const choose=event.target.closest('[data-choose]');

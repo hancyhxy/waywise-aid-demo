@@ -142,6 +142,6 @@ button { color:inherit; }
 }
 @media (prefers-reduced-motion:reduce) { *,*::before,*::after { scroll-behavior:auto!important; transition:none!important; animation:none!important; } }
 
-.demo-scenario-card>span strong,.demo-scenario-card>span small { display:block; }
-.scenario-options { display:flex; flex-wrap:wrap; gap:6px; margin-top:12px; }
-.scenario-options .scenario { padding:7px 11px; font-size:11px; }
+.scenario-options { display:flex; flex-wrap:wrap; gap:8px; margin:4px 0 20px; }
+#scenario-sheet { padding-bottom:max(26px,calc(env(safe-area-inset-bottom,0px) + 16px)); }
+.scenario-options .scenario { padding:9px 14px; font-size:12px; }

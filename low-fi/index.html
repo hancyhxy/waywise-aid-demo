@@ -38,7 +38,7 @@
             <p class="overline">TUESDAY COMMUTE</p>
             <h2 id="today-label">Morning, Xinyi</h2>
           </div>
-          <span class="avatar" aria-label="Demo profile">XY</span>
+          <button class="avatar" id="open-scenarios" aria-label="Open demo scenario switcher">XY</button>
         </header>
 
         <article class="trip-summary">
@@ -152,14 +152,6 @@
           <label for="reliability-slider"><span><strong>Reliability</strong><small>Avoid uncertain connections</small></span><output id="reliability-value">9</output></label>
           <input id="reliability-slider" type="range" min="1" max="10" value="9">
         </div>
-        <div class="preference-card demo-scenario-card">
-          <span><strong>Demo scenario</strong><small>Testing only · switches the Today screen</small></span>
-          <div class="scenario-options" role="group" aria-label="Demo scenario">
-            <button class="scenario active" data-scenario="disruption">Disruption</button>
-            <button class="scenario" data-scenario="normal">Normal day</button>
-            <button class="scenario" data-scenario="capacity">Full bus</button>
-          </div>
-        </div>
         <div class="toggle-card"><span><strong>Learn from my choices</strong><small>Adjust defaults, never today's choice</small></span><button class="toggle active" aria-pressed="true"><i></i></button></div>
         <div class="toggle-card"><span><strong>Actionable alerts only</strong><small>Notify me only when switching may help</small></span><button class="toggle active" aria-pressed="true"><i></i></button></div>
       </section>
@@ -181,6 +173,17 @@
         <button class="primary full" data-action="close-sheet">Got it</button>
       </section>
 
+      <section class="bottom-sheet" id="scenario-sheet" role="dialog" aria-modal="true" aria-labelledby="scenario-sheet-title">
+        <button class="sheet-handle" data-action="close-sheet" aria-label="Close"></button>
+        <p class="overline">DEMO CONTROLS · MOCK DATA</p>
+        <h3 id="scenario-sheet-title">Switch scenario</h3>
+        <div class="scenario-options" role="group" aria-label="Demo scenario">
+          <button class="scenario active" data-scenario="disruption">Disruption</button>
+          <button class="scenario" data-scenario="normal">Normal day</button>
+          <button class="scenario" data-scenario="capacity">Full bus</button>
+        </div>
+        <button class="primary full" data-action="close-sheet">Done</button>
+      </section>
       <section class="decision-toast" id="decision-toast" role="status" aria-live="polite">
         <span>✓</span><div><strong id="toast-title">Decision saved</strong><p id="toast-copy">We'll keep an eye on your journey.</p></div>
       </section>

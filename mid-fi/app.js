@@ -124,7 +124,12 @@ function openSheet(title, copy) {
 function closeSheet() {
   $("#sheet-backdrop").classList.remove("open");
   $("#method-sheet").classList.remove("open");
+  $("#scenario-sheet").classList.remove("open");
 }
+$("#open-scenarios").addEventListener("click",()=>{
+  $("#sheet-backdrop").classList.add("open");
+  $("#scenario-sheet").classList.add("open");
+});
 function showToast(option) {
   state.selected=option.id;
   $("#toast-title").textContent = `${option.title} saved`;
@@ -152,7 +157,7 @@ function setScenario(id,persist=true){
   $$('.scenario').forEach(b=>{const on=b.dataset.scenario===id;b.classList.toggle('active',on);b.setAttribute('aria-pressed',String(on));});
   render();
 }
-$$('.scenario').forEach(button=>button.addEventListener('click',()=>setScenario(button.dataset.scenario)));
+$$('.scenario').forEach(button=>button.addEventListener('click',()=>{setScenario(button.dataset.scenario);closeSheet();}));
 $("#route-options").addEventListener("click",event=>{
   const choose=event.target.closest('[data-choose]');
   const detail=event.target.closest('[data-detail]');
