@@ -1,0 +1,135 @@
+/* Mid-fidelity skin over v1: same layout, content and interactions.
+   Greyscale, system font, one blue accent for primary action/selection,
+   one muted red/green for status meaning only. No shadows, gradients or decorative colour. */
+:root {
+  --ink:#222; --deep:#222; --paper:#f4f4f4; --white:#fff;
+  --mint:#e6e6e6; --mint-dark:#2f5fd0; --coral:#999; --yellow:#e6e6e6; --blue:#e6e6e6;
+  --muted:#6b6b6b; --line:#d0d0d0; --shadow:none; --accent:#2f5fd0;
+}
+*,*::before,*::after { font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif !important; box-shadow:none !important; text-shadow:none !important; letter-spacing:normal !important; }
+html,body { background:#e9e9e9; }
+.demo-shell { background:#e9e9e9 !important; }
+.demo-notes h1 { font-size:44px; font-weight:700; line-height:1.1; }
+.demo-notes small { display:block; margin-top:10px; color:var(--muted); font-size:12px; line-height:1.5; }
+.demo-notes a { color:var(--accent); }
+.research-note { border-left-color:#999; background:#fff; }
+.scenario { border-color:#bbb; }
+.scenario.active { background:#222; border-color:#222; }
+.phone { border:2px solid #222; border-radius:36px; background:var(--paper); }
+
+/* dark hero blocks -> neutral boxes */
+.trip-summary,.day-plan { background:#fff; color:var(--ink); border:1px solid var(--line); }
+.time,.plan-top small,.plan-leg small,.no-plan,.no-plan p { color:var(--muted) !important; }
+.no-plan strong,.plan-leg strong { color:var(--ink); }
+.journey-line { color:#888; } .journey-line i { border-color:#bbb; }
+.edit-trip { color:var(--accent); border-top-color:var(--line); }
+.plan-leg { border-top-color:var(--line); }
+.plan-leg span:first-child { color:var(--muted); }
+.plan-badge { background:#e6e6e6; }
+
+/* alerts: grey card, status conveyed by icon + text */
+.alert-card,.alert-card.normal,.alert-card.capacity { background:#fff; border:1px solid var(--line); }
+.alert-card p,.alert-card.normal p,.alert-card.capacity p { color:var(--muted); }
+.alert-icon { background:#c0392b; }
+.alert-card.normal .alert-icon { background:#3a8a55; }
+.alert-card.capacity .alert-icon { background:#888; }
+
+/* chips, buttons and selection use the single accent */
+.chip { background:#fff; }
+.chip.active { background:var(--accent); border-color:var(--accent); }
+.primary { background:var(--accent); }
+.secondary,.text-button,.info-button { color:var(--accent); }
+.avatar,.round-button { background:#d6d6d6; color:#222; }
+.day.active { background:var(--accent); border-color:var(--accent); }
+.day i,.day i.work,.day i.uni,.day i.home,.day i.personal { background:#999; }
+.nav-item.active { color:var(--accent); }
+.toggle.active { background:var(--accent); }
+.preference-card input { accent-color:var(--accent); }
+
+/* route cards */
+.route-card { border-radius:12px; }
+.route-card.recommended { border:2px solid var(--accent); }
+.route-card.recommended::before { background:var(--accent); }
+.action-icon,.action-icon.wait,.action-icon.switch { background:#e6e6e6; border-radius:10px; }
+.metric { background:#efefef; color:#555; }
+.metric.warn { background:#fbe9e7; color:#a33a2b; }
+.metric.good { background:#e7f3ea; color:#2f6e43; }
+
+/* secondary surfaces */
+.saved-trip,.saved-trip.featured,.preference-card,.toggle-card { background:#fff; border-color:var(--line); border-radius:12px; }
+.saved-icon,.saved-icon.train,.saved-icon.bus,.saved-icon.home { background:#e6e6e6; }
+.service-status,.service-status.good { background:#efefef; color:#555; }
+.preference-card output,.method-item>span { background:#e6e6e6; }
+.bottom-sheet { background:#fff; }
+.decision-toast { background:#222; }
+.decision-toast>span { background:#fff; }
+.status-bar { color:#222; }
+@media (max-width:800px) { body,.demo-shell { background:var(--paper) !important; } .phone { border:0; border-radius:0; } }
+.overline,.eyebrow { color:#6b6b6b !important; }
+.bottom-nav { background:#fff; border-top-color:var(--line); }
+.overline,.eyebrow { color:#6b6b6b !important; }
+.bottom-nav { background:#fff; border-top-color:var(--line); }
+.avatar { display:grid; place-items:center; }
+.bottom-sheet:not(.open) { visibility:hidden; }
+
+.scenario-options { display:flex; flex-wrap:wrap; gap:8px; margin:4px 0 20px; }
+#scenario-sheet { padding-bottom:max(26px,calc(env(safe-area-inset-bottom,0px) + 16px)); }
+.scenario-options .scenario { padding:9px 14px; font-size:12px; }
+
+/* Routine editor + chosen state (usability-test pass) */
+#routine-sheet { max-height:86%; overflow-y:auto; padding-bottom:max(26px,calc(env(safe-area-inset-bottom,0px) + 16px)); }
+.form-label { margin:14px 0 6px; font-size:12px; font-weight:700; color:#222; }
+.day-toggles { display:grid; grid-template-columns:repeat(7,1fr); gap:6px; }
+.day-toggles button,.template-toggles button { padding:9px 0; border:1px solid var(--line); border-radius:10px; background:#fff; font-size:12px; font-weight:700; cursor:pointer; }
+.template-toggles { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+.day-toggles button.active,.template-toggles button.active { background:var(--accent); border-color:var(--accent); color:#fff; }
+.field { display:block; margin-bottom:8px; }
+.field span { display:block; margin-bottom:3px; color:var(--muted); font-size:10px; font-weight:700; }
+.field input { box-sizing:border-box; width:100%; padding:9px 10px; border:1px solid var(--line); border-radius:9px; font-size:13px; background:#fff; }
+.field-row { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.form-error { min-height:14px; margin:4px 0; color:#c0392b; font-size:11px; }
+.text-button.full { display:block; width:100%; margin-top:10px; padding:6px; }
+.no-plan .primary { margin-top:10px; }
+.plan-edit { display:block; margin-top:8px; padding:0; }
+.saved-trip[data-template] { cursor:pointer; }
+.route-card.chosen { background:#eef3fd; }
+
+/* Heuristic-evaluation fixes (I01–I10) */
+.leave-by { margin:-5px 0 7px !important; color:#222 !important; font-size:9px !important; }
+.metric.crowd-1 { background:#e7f3ea; color:#2f6e43; }
+.metric.crowd-2 { background:#fff4dc; color:#8a5a00; }
+.metric.crowd-3 { background:#fbe9e7; color:#a33a2b; }
+.route-time em.late { font-style:normal; color:#a33a2b; font-weight:700; }
+.tradeoff { margin:0 0 10px; padding:10px 12px; border:1px solid #e3b4ad; border-radius:12px; background:#fdf1ef; font-size:10px; line-height:1.45; }
+.tradeoff .text-button { display:block; margin-top:4px; padding:0; font-size:10px; }
+.confidence-line { align-items:center; }
+.certainty { border:0; background:none; padding:0; color:var(--accent); font-size:9px; font-weight:700; cursor:pointer; }
+.certainty i { display:inline-block; width:6px; height:6px; margin-right:3px; border-radius:50%; }
+.certainty i.c-high { background:#3a8a55; } .certainty i.c-medium { background:#d39a1c; } .certainty i.c-low { background:#c0392b; }
+.scale { display:flex; justify-content:space-between; margin-top:2px; color:var(--muted); font-size:8px; }
+.alert-card.normal .alert-icon { background:#3a8a55; }
+
+/* PWA frame lock (mirrors Social Media Loop): fixed viewport, no page bounce/zoom,
+   only the active screen scrolls, nav pinned above the home indicator. */
+html,body { touch-action:pan-x pan-y; -webkit-text-size-adjust:100%; }
+@media (max-width:800px) {
+  html,body { height:100%; overflow:hidden; overscroll-behavior:none; }
+  .demo-shell { position:fixed; inset:0; min-height:0; height:100dvh; overflow:hidden; }
+  .phone { position:fixed; inset:0; width:100%; height:100dvh; }
+  .status-bar { flex:none; }
+  .screen { overscroll-behavior:contain; -webkit-overflow-scrolling:touch; padding-bottom:24px; }
+  .bottom-nav { position:fixed; z-index:6; left:0; right:0; bottom:0; }
+  .bottom-sheet { position:fixed; max-height:calc(100dvh - env(safe-area-inset-top,0px) - 24px); overflow-y:auto; overscroll-behavior:contain; }
+  .sheet-backdrop { position:fixed; }
+  input,select,textarea { font-size:16px; }
+}
+
+/* Routine editor form: iOS time inputs have an intrinsic min-width and centred value; keep fields inside the grid */
+.field-row > .field,.field { min-width:0; }
+.field input { -webkit-appearance:none; appearance:none; display:block; min-width:0; max-width:100%; height:42px; margin:0; line-height:normal; text-align:left; color:#222; }
+.field input::-webkit-date-and-time-value { text-align:left; margin:0; }
+.field input::-webkit-datetime-edit { padding:0; }
+/* iOS Safari: grid 1fr tracks honour the time input's intrinsic width; force equal shrinkable columns and clip */
+.field-row { grid-template-columns:minmax(0,1fr) minmax(0,1fr); }
+.field-row > .field { overflow:hidden; }
+.field input[type="time"] { width:100%; min-width:0; max-width:100%; box-sizing:border-box; }

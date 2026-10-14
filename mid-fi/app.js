@@ -1,26 +1,32 @@
 // crowd: 1 Low · 2 Moderate · 3 High. leaveBy = latest time to leave home and still catch it (I01).
 const scenarios = {
+  // Scenario 2 "Getting to Work on Time" + its experience-evaluation script (Disruption → In a hurry):
+  // 5:45 pm, uni finished late, running late for part-time job; next train fastest but standing;
+  // waiting adds ~9 min and may make him late; Metro needs more walking + a transfer and is less certain.
   disruption: {
-    clock:"8:06", overline:"WEDNESDAY · OFFICE DAY", greeting:"Morning, Alex", alertClass:"", alertIcon:"!",
+    clock:"17:45", overline:"TUESDAY · TO WORK", greeting:"Evening, Alex", alertClass:"", alertIcon:"!",
     alertTitle:"North Shore Line disruption",
-    alertCopy:"Reduced frequency is increasing platform crowding. Recovery time unknown · updated 2 min ago, next update 8:15.",
-    confidence:78, updated:"2 min ago", target:"8:58",
-    trip:["Wollstonecraft","Wynyard","Leave from 8:08","Arrive by 8:58"],
+    alertCopy:"Reduced service is making platforms more crowded. Recovery time unknown · updated 2 min ago, next update 18:00.",
+    confidence:76, updated:"2 min ago", target:"18:30",
+    trip:["UTS (Central)","Chatswood (work)","Leave from 17:45","Shift starts 18:30"],
     options:[
-      { id:"take", icon:"→", iconClass:"", title:"Take the next train", subtitle:"Departs 8:14 · Platform 1", leaveBy:"8:08", minutes:48, arrival:"8:54", seat:1, crowd:3, walk:6, transfers:0, reliability:68, status:"Standing likely", tone:"warn", detail:"Fastest, but reduced frequency means it will be packed and a seat is unlikely." },
-      { id:"wait", icon:"Ⅱ", iconClass:"wait", title:"Wait for one train", subtitle:"Departs 8:23 · +9 min", leaveBy:"8:17", minutes:57, arrival:"9:03", seat:4, crowd:2, walk:6, transfers:0, reliability:72, status:"Seat more likely", tone:"good", detail:"The current platform queue should clear first, so there is more room." },
-      { id:"switch", icon:"↗", iconClass:"switch", title:"Switch to Metro", subtitle:"Walk to Crows Nest · 1 transfer", leaveBy:"8:09", minutes:52, arrival:"8:58", seat:2, crowd:2, walk:15, transfers:1, reliability:86, status:"Standing possible", tone:"", detail:"More reliable today, with extra walking and one transfer." }
+      { id:"take", icon:"→", iconClass:"", title:"Take the next train", subtitle:"Departs 17:52 · Platform 16", leaveBy:"17:45", minutes:37, arrival:"18:22", seat:0, crowd:3, walk:7, transfers:0, reliability:80, status:"Standing likely", tone:"warn", detail:"Fastest option and the best chance of starting your shift on time, even though a seat is unlikely." },
+      { id:"wait", icon:"Ⅱ", iconClass:"wait", title:"Wait for one train", subtitle:"Departs 18:01 · +9 min", leaveBy:"17:54", minutes:46, arrival:"18:31", seat:4, crowd:2, walk:7, transfers:0, reliability:78, status:"Seat more likely", tone:"good", detail:"More comfortable with a better chance of a seat, but about 9 minutes slower, so you may be late." },
+      { id:"switch", icon:"↗", iconClass:"switch", title:"Switch to Metro", subtitle:"Walk to Central Metro · 1 transfer", leaveBy:"17:47", minutes:44, arrival:"18:24–18:34", seat:2, crowd:2, walk:14, transfers:1, reliability:66, status:"Standing possible", tone:"", detail:"Avoids the disrupted line, but more walking, one transfer and a less certain arrival time." }
     ]
   },
+  // Scenario 3 "Unexpected Disruption on the Way Home": 7:20 pm after work, usual line delayed by an incident,
+  // limited information; compare alternatives (bus or a different line) and pick the most reliable.
   normal: {
-    clock:"8:06", overline:"WEDNESDAY · OFFICE DAY", greeting:"Morning, Alex", alertClass:"normal", alertIcon:"✓",
-    alertTitle:"Your commute is running normally", alertCopy:"No current disruption. Usual weekday crowding expected · updated now.",
-    confidence:91, updated:"just now", target:"8:46",
-    trip:["Wollstonecraft","Wynyard","Leave from 8:08","Arrive by 8:46"],
+    clock:"19:20", overline:"TUESDAY · HEADING HOME", greeting:"Evening, Alex", alertClass:"", alertIcon:"!",
+    alertTitle:"Delays on your usual line",
+    alertCopy:"North Shore Line trains delayed after an incident at Artarmon. Expected delay 20+ min · recovery time unknown · updated 1 min ago.",
+    confidence:62, updated:"1 min ago", target:"19:55",
+    trip:["Chatswood (work)","Wollstonecraft","Leave from 19:20","Arrive by 19:55"],
     options:[
-      { id:"take",icon:"→",iconClass:"",title:"Take the next train",subtitle:"Departs 8:15 · Platform 1",leaveBy:"8:09",minutes:35,arrival:"8:41",seat:3,crowd:2,walk:6,transfers:0,reliability:93,status:"Seat possible",tone:"good",detail:"Direct and on time, with usual weekday demand." },
-      { id:"wait",icon:"Ⅱ",iconClass:"wait",title:"Wait for one train",subtitle:"Departs 8:23 · +8 min",leaveBy:"8:17",minutes:43,arrival:"8:49",seat:4,crowd:1,walk:6,transfers:0,reliability:91,status:"Seat more likely",tone:"good",detail:"Slightly quieter based on this routine's history." },
-      { id:"switch",icon:"↗",iconClass:"switch",title:"Switch to Metro",subtitle:"Walk to Crows Nest · 1 transfer",leaveBy:"8:09",minutes:50,arrival:"8:56",seat:2,crowd:2,walk:15,transfers:1,reliability:92,status:"Standing possible",tone:"",detail:"Reliable, but slower door to door for this journey." }
+      { id:"take", icon:"→", iconClass:"", title:"Wait for the delayed train", subtitle:"Platform 1 · next train delayed 20+ min", leaveBy:"19:20", minutes:45, arrival:"20:05–20:25", seat:1, crowd:3, walk:4, transfers:0, reliability:45, status:"Delay uncertain", tone:"warn", detail:"Your usual direct train, but the incident means the delay could grow and the platform is filling up." },
+      { id:"wait", icon:"Ⅱ", iconClass:"wait", title:"Take the bus instead", subtitle:"Route 115 · Stand C, Victoria Ave · departs 19:28", leaveBy:"19:22", minutes:38, arrival:"19:58", seat:3, crowd:2, walk:6, transfers:0, reliability:82, status:"Seat possible", tone:"good", detail:"Avoids the delayed line completely. Slower than a normal train, but the most reliable option right now." },
+      { id:"switch", icon:"↗", iconClass:"switch", title:"Switch to Metro + walk", subtitle:"Metro to Crows Nest · 12 min walk home", leaveBy:"19:23", minutes:33, arrival:"19:53", seat:2, crowd:2, walk:16, transfers:0, reliability:88, status:"Standing possible", tone:"", detail:"A different line that isn't affected. Fastest and reliable, but ends with a 12-minute walk." }
     ]
   },
   // Scenario 1 follows Beomhui's "A More Comfortable Journey Home" and Haruna's UX story:
@@ -181,8 +187,8 @@ function setScenario(id,persist=true){
   id=SCENARIO_ALIAS[id]||id;
   if(!scenarios[id]) return;
   state.scenario=id; state.selected=null;
-  if(id==="capacity"){ state.prefs=new Set(); $$('.chip').forEach(b=>{b.classList.remove('active');b.setAttribute('aria-pressed','false');}); }
-  const day=id==="capacity"?"tue":"wed"; state.day=day;
+  state.prefs=new Set(); $$('.chip').forEach(b=>{b.classList.remove('active');b.setAttribute('aria-pressed','false');});
+  const day="tue"; state.day=day;
   $$('.day').forEach(b=>{const on=b.dataset.day===day;b.classList.toggle('active',on);b.setAttribute('aria-selected',String(on));});
   renderWeeklyRoutine();
   if(persist){try{localStorage.setItem('waywise-scenario',id);}catch(e){}}
