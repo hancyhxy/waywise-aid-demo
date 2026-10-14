@@ -19,7 +19,7 @@
         <span>Built on the low-fi wireframes</span>
         <strong>Greyscale UI · blue accent · status colours · fictional data</strong>
         <p><a href="../low-fi/">Low-fi</a> · <a href="../">Hi-fi</a></p>
-        <small>Priorities and routine editing retain the original demo limitations. No live transport data or persistent saving.</small>
+        <small>Routines and priorities can be edited for this session. No live transport data; changes reset on reload.</small>
       </div>
       <div class="scenario-control" aria-label="Demo scenario">
         <span>Try a scenario</span>
@@ -118,17 +118,17 @@
           <div><p class="overline">SAVED TEMPLATES</p><h3>Reuse a routine</h3></div>
           <button class="text-button" id="edit-week">Edit week</button>
         </div>
-        <article class="saved-trip featured">
+        <article class="saved-trip featured" data-template="office" role="button" tabindex="0" aria-label="Use Office day template">
           <span class="saved-icon train">W</span>
           <div><strong>Office day</strong><p>Wollstonecraft → Wynyard</p><small>Out 8:15 · Return 17:30</small></div>
           <span class="service-status good">M · W</span>
         </article>
-        <article class="saved-trip">
+        <article class="saved-trip" data-template="uni" role="button" tabindex="0" aria-label="Use University day template">
           <span class="saved-icon bus">U</span>
           <div><strong>University day</strong><p>Home → UTS</p><small>Out 9:10 · Return 16:00</small></div>
           <span class="service-status">T · T</span>
         </article>
-        <article class="saved-trip">
+        <article class="saved-trip" data-template="remote" role="button" tabindex="0" aria-label="Use Remote day template">
           <span class="saved-icon home">H</span>
           <div><strong>Remote day</strong><p>No commute alerts</p><small>Notifications paused</small></div>
           <span class="service-status">F</span>
@@ -183,6 +183,34 @@
           <button class="scenario" data-scenario="capacity">Full bus</button>
         </div>
         <button class="primary full" data-action="close-sheet">Done</button>
+      </section>
+      <section class="bottom-sheet" id="routine-sheet" role="dialog" aria-modal="true" aria-labelledby="routine-sheet-title">
+        <button class="sheet-handle" data-action="close-sheet" aria-label="Close"></button>
+        <p class="overline">WEEKLY ROUTINE</p>
+        <h3 id="routine-sheet-title">Add a journey</h3>
+        <p class="form-label">1. Which days?</p>
+        <div class="day-toggles" id="routine-days" role="group" aria-label="Days">
+          <button data-day="mon">M</button><button data-day="tue">T</button><button data-day="wed">W</button><button data-day="thu">T</button><button data-day="fri">F</button><button data-day="sat">S</button><button data-day="sun">S</button>
+        </div>
+        <p class="form-label">2. Start from</p>
+        <div class="template-toggles" id="routine-templates" role="group" aria-label="Template">
+          <button data-template="office">Office day</button><button data-template="uni">University day</button><button data-template="remote">No commute</button><button data-template="custom">Custom</button>
+        </div>
+        <div id="routine-fields">
+          <p class="form-label">3. Journey details</p>
+          <label class="field"><span>Name</span><input id="r-name" placeholder="e.g. Gym day"></label>
+          <div class="field-row">
+            <label class="field"><span>From</span><input id="r-from" placeholder="e.g. Wollstonecraft"></label>
+            <label class="field"><span>To</span><input id="r-to" placeholder="e.g. Wynyard"></label>
+          </div>
+          <div class="field-row">
+            <label class="field"><span>Leave at</span><input id="r-out" type="time" value="08:15"></label>
+            <label class="field"><span>Return at</span><input id="r-back" type="time" value="17:30"></label>
+          </div>
+        </div>
+        <p class="form-error" id="routine-error" role="alert"></p>
+        <button class="primary full" id="save-routine">Save routine</button>
+        <button class="text-button full" id="clear-routine">Clear selected days</button>
       </section>
       <section class="decision-toast" id="decision-toast" role="status" aria-live="polite">
         <span>✓</span><div><strong id="toast-title">Decision saved</strong><p id="toast-copy">We'll keep an eye on your journey.</p></div>

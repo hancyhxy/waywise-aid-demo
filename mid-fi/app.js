@@ -59,7 +59,8 @@ const $ = (selector, root=document) => root.querySelector(selector);
 const $$ = (selector, root=document) => [...root.querySelectorAll(selector)];
 
 function score(option) {
-  let value = 100 - option.minutes * 1.15 + option.reliability * .28 + option.seat * 2;
+  const w = { time:+$("#time-slider").value/8, seat:+$("#seat-slider").value/6, rel:+$("#reliability-slider").value/9 };
+  let value = 100 - option.minutes * 1.15 * w.time + option.reliability * .28 * w.rel + option.seat * 2 * w.seat;
   if (state.prefs.has("hurry")) value -= option.minutes * 1.1;
   if (state.prefs.has("seat")) value += option.seat * 12;
   if (state.prefs.has("walk")) value -= option.walk * 2.7;
@@ -77,8 +78,8 @@ function renderWeeklyRoutine() {
       <span>${leg.label}</span>
       <div><strong>${leg.route}</strong><small>${leg.detail}</small></div>
       <time>${leg.time}</time>
-    </div>`).join("") : `<div class="no-plan"><strong>${routine.title}</strong><p>${routine.note}. Tap + to add a journey.</p></div>`;
-  plan.innerHTML=`<div class="plan-top"><div><strong>${routine.title}</strong><small>${routine.note}</small></div><span class="plan-badge">${routine.badge}</span></div>${legs}`;
+    </div>`).join("") : `<div class="no-plan"><p>No journeys saved for this day.</p><button class="primary" data-action="add-journey">+ Add a journey</button></div>`;
+  plan.innerHTML=`<div class="plan-top"><div><strong>${routine.title}</strong><small>${routine.note}</small></div><span class="plan-badge">${routine.badge}</span></div>${legs}${routine.legs.length?'<button class="text-button plan-edit" data-action="edit-day">Edit this day</button>':''}`;
 }
 
 function render() {
@@ -95,7 +96,7 @@ function render() {
   times[0].textContent=data.trip[2]; times[1].textContent=data.trip[3];
 
   $("#route-options").innerHTML = data.options.map(option => `
-    <article class="route-card ${option.id===recommended ? "recommended" : ""}" data-route="${option.id}">
+    <article class="route-card ${option.id===recommended ? "recommended" : ""} ${option.id===state.selected ? "chosen" : ""}" data-route="${option.id}">
       <div class="action-icon ${option.iconClass}">${option.icon}</div>
       <div class="route-main">
         <h4>${option.title}</h4><p>${option.subtitle}</p>
@@ -107,7 +108,7 @@ function render() {
       </div>
       <div class="route-time"><strong>${option.arrival}</strong><small>${option.minutes} min total</small></div>
       <div class="route-actions">
-        <button class="primary" data-choose="${option.id}">${option.id===recommended ? "Choose this" : "Choose"}</button>
+        <button class="primary" data-choose="${option.id}">${option.id===state.selected ? "Chosen ✓" : option.id===recommended ? "Choose this" : "Choose"}</button>
         <button class="secondary" data-detail="${option.id}">Why?</button>
       </div>
     </article>`).join("");
@@ -125,6 +126,7 @@ function closeSheet() {
   $("#sheet-backdrop").classList.remove("open");
   $("#method-sheet").classList.remove("open");
   $("#scenario-sheet").classList.remove("open");
+  $("#routine-sheet").classList.remove("open");
 }
 $("#open-scenarios").addEventListener("click",()=>{
   $("#sheet-backdrop").classList.add("open");
@@ -132,6 +134,7 @@ $("#open-scenarios").addEventListener("click",()=>{
 });
 function showToast(option) {
   state.selected=option.id;
+  render();
   $("#toast-title").textContent = `${option.title} saved`;
   $("#toast-copy").textContent = `We’ll watch for changes before ${option.arrival}.`;
   const toast=$("#decision-toast"); toast.classList.add("show");
@@ -152,7 +155,7 @@ $("#reset-context").addEventListener("click",()=>{
 });
 function setScenario(id,persist=true){
   if(!scenarios[id]) return;
-  state.scenario=id;
+  state.scenario=id; state.selected=null;
   if(persist){try{localStorage.setItem('waywise-scenario',id);}catch(e){}}
   $$('.scenario').forEach(b=>{const on=b.dataset.scenario===id;b.classList.toggle('active',on);b.setAttribute('aria-pressed',String(on));});
   render();
@@ -185,14 +188,69 @@ $$('.day').forEach(button=>button.addEventListener('click',()=>{
   $$('.day').forEach(b=>{b.classList.toggle('active',b===button);b.setAttribute('aria-selected',String(b===button));});
   renderWeeklyRoutine();
 }));
-function showRoutineEditor(){
-  $("#toast-title").textContent="Routine editor";
-  $("#toast-copy").textContent="Choose days, then add morning and return journeys.";
+const templates={
+  office:{title:"Office day",badge:"WORK",dot:"work",from:"Wollstonecraft",to:"Wynyard",out:"08:15",back:"17:30",mode:"Train · direct"},
+  uni:{title:"University day",badge:"STUDY",dot:"uni",from:"Wollstonecraft",to:"UTS",out:"09:10",back:"16:00",mode:"Train + 9 min walk"},
+  remote:{title:"Remote day",badge:"HOME",dot:"home",none:true},
+  custom:{title:"",badge:"PERSONAL",dot:"personal",from:"",to:"",out:"08:15",back:"17:30",mode:"Choose around live conditions"}
+};
+const dayNames={mon:"Monday",tue:"Tuesday",wed:"Wednesday",thu:"Thursday",fri:"Friday",sat:"Saturday",sun:"Sunday"};
+const editor={days:new Set(),template:"custom"};
+const hm=t=>t?t.replace(/^0/,""):"";
+function setTemplate(id,fill=true){
+  editor.template=id; const t=templates[id];
+  $$('#routine-templates button').forEach(b=>b.classList.toggle('active',b.dataset.template===id));
+  $("#routine-fields").hidden=!!t.none;
+  if(fill&&!t.none){$("#r-name").value=t.title;$("#r-from").value=t.from;$("#r-to").value=t.to;$("#r-out").value=t.out;$("#r-back").value=t.back;}
+  $("#routine-error").textContent="";
+}
+function syncDayToggles(){$$('#routine-days button').forEach(b=>{const on=editor.days.has(b.dataset.day);b.classList.toggle('active',on);b.setAttribute('aria-pressed',String(on));});}
+function openRoutineEditor(mode,templateId){
+  editor.days=new Set([state.day]); syncDayToggles();
+  const r=weeklyRoutines[state.day];
+  $("#routine-sheet-title").textContent= mode==="edit" ? `Edit ${dayNames[state.day]}` : templateId ? `Use ${templates[templateId].title}` : "Add a journey";
+  if(templateId) setTemplate(templateId);
+  else if(mode==="edit" && r.legs.length){
+    const out=r.legs[0], back=r.legs[1]; const [from,to]=out.route.split(" → ");
+    setTemplate(r.template||"custom",false);
+    $("#r-name").value=r.title;$("#r-from").value=from;$("#r-to").value=to;
+    $("#r-out").value=out.time.padStart(5,"0");$("#r-back").value=back?back.time.padStart(5,"0"):"";
+  } else { setTemplate("custom"); }
+  $("#sheet-backdrop").classList.add("open"); $("#routine-sheet").classList.add("open");
+}
+$$('#routine-days button').forEach(b=>b.addEventListener('click',()=>{const d=b.dataset.day;editor.days.has(d)?editor.days.delete(d):editor.days.add(d);syncDayToggles();}));
+$$('#routine-templates button').forEach(b=>b.addEventListener('click',()=>setTemplate(b.dataset.template)));
+function setDot(day,dot){const i=$(`.day[data-day="${day}"] i`); if(i) i.className=dot||"";}
+$("#save-routine").addEventListener("click",()=>{
+  const err=$("#routine-error"); const t=templates[editor.template];
+  if(!editor.days.size){err.textContent="Pick at least one day.";return;}
+  let routine;
+  if(t.none){ routine={title:t.title,note:"No commute planned",badge:t.badge,template:editor.template,legs:[]}; }
+  else {
+    const name=$("#r-name").value.trim()||"My journey", from=$("#r-from").value.trim(), to=$("#r-to").value.trim(), out=$("#r-out").value, back=$("#r-back").value;
+    if(!from||!to){err.textContent="Add where you start and where you're going.";return;}
+    if(!out){err.textContent="Add a leave time.";return;}
+    const legs=[{label:"OUT",route:`${from} → ${to}`,detail:t.mode||"Choose around live conditions",time:hm(out)}];
+    if(back) legs.push({label:"HOME",route:`${to} → ${from}`,detail:t.mode||"Choose around live conditions",time:hm(back)});
+    routine={title:name,note:"Saved routine",badge:t.badge,template:editor.template,legs};
+  }
+  editor.days.forEach(d=>{weeklyRoutines[d]={...routine,legs:routine.legs.map(l=>({...l}))};setDot(d,t.dot);});
+  closeSheet(); renderWeeklyRoutine();
+  $("#toast-title").textContent="Routine saved";
+  $("#toast-copy").textContent=`${routine.title} · ${[...editor.days].map(d=>dayNames[d].slice(0,3)).join(", ")}`;
   const toast=$("#decision-toast"); toast.classList.add("show");
   clearTimeout(showToast.timer); showToast.timer=setTimeout(()=>toast.classList.remove("show"),3200);
-}
-$("#add-routine").addEventListener("click",showRoutineEditor);
-$("#edit-week").addEventListener("click",showRoutineEditor);
+});
+$("#clear-routine").addEventListener("click",()=>{
+  if(!editor.days.size){$("#routine-error").textContent="Pick at least one day.";return;}
+  editor.days.forEach(d=>{weeklyRoutines[d]={title:"No routine",note:"Nothing saved",badge:"FREE",legs:[]};setDot(d,"");});
+  closeSheet(); renderWeeklyRoutine();
+});
+$("#add-routine").addEventListener("click",()=>openRoutineEditor("add"));
+$("#edit-week").addEventListener("click",()=>openRoutineEditor("edit"));
+$("#day-plan").addEventListener("click",e=>{ if(e.target.closest('[data-action="add-journey"]')) openRoutineEditor("add"); else if(e.target.closest('[data-action="edit-day"]')) openRoutineEditor("edit"); });
+$$('.saved-trip[data-template]').forEach(c=>{const go=()=>openRoutineEditor("add",c.dataset.template);c.addEventListener('click',go);c.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();go();}});});
+$$('input[type="range"]').forEach(input=>input.addEventListener('change',render));
 
 const demoParams=new URLSearchParams(location.search);
 if(demoParams.get('export')==='1') document.body.classList.add('export');
