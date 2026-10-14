@@ -42,19 +42,19 @@ const certainty=c=>c>=85?"High":c>=70?"Medium":"Low";
 
 const state = { scenario:"disruption", prefs:new Set(["hurry"]), selected:null, day:"mon" };
 const weeklyRoutines = {
-  mon:{ title:"Office day", note:"Your regular Monday", badge:"WORK", legs:[
+  mon:{ template:"office", title:"Office day", note:"Your regular Monday", badge:"WORK", legs:[
     {label:"OUT",route:"Wollstonecraft → Wynyard",detail:"Train · direct",time:"8:15"},
     {label:"HOME",route:"Wynyard → Wollstonecraft",detail:"Train · quieter after 6",time:"17:32"}
   ]},
-  tue:{ title:"University day", note:"Tuesday classes", badge:"STUDY", legs:[
+  tue:{ template:"uni", title:"University day", note:"Tuesday classes", badge:"STUDY", legs:[
     {label:"OUT",route:"Wollstonecraft → UTS",detail:"Train + 9 min walk",time:"9:05"},
     {label:"HOME",route:"Central → Wollstonecraft",detail:"Train · direct",time:"16:40"}
   ]},
-  wed:{ title:"Office day", note:"Your regular Wednesday", badge:"WORK", legs:[
+  wed:{ template:"office", title:"Office day", note:"Your regular Wednesday", badge:"WORK", legs:[
     {label:"OUT",route:"Wollstonecraft → Wynyard",detail:"Train · direct",time:"8:15"},
     {label:"HOME",route:"Wynyard → Wollstonecraft",detail:"Train · direct",time:"17:32"}
   ]},
-  thu:{ title:"University day", note:"Late-start Thursday", badge:"STUDY", legs:[
+  thu:{ template:"uni", title:"University day", note:"Late-start Thursday", badge:"STUDY", legs:[
     {label:"OUT",route:"Wollstonecraft → UTS",detail:"Train + 9 min walk",time:"10:20"},
     {label:"HOME",route:"Central → Wollstonecraft",detail:"Train · direct",time:"19:10"}
   ]},
