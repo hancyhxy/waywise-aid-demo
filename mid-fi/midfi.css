@@ -129,3 +129,7 @@ html,body { touch-action:pan-x pan-y; -webkit-text-size-adjust:100%; }
 .field input { -webkit-appearance:none; appearance:none; display:block; min-width:0; max-width:100%; height:42px; margin:0; line-height:normal; text-align:left; color:#222; }
 .field input::-webkit-date-and-time-value { text-align:left; margin:0; }
 .field input::-webkit-datetime-edit { padding:0; }
+/* iOS Safari: grid 1fr tracks honour the time input's intrinsic width; force equal shrinkable columns and clip */
+.field-row { grid-template-columns:minmax(0,1fr) minmax(0,1fr); }
+.field-row > .field { overflow:hidden; }
+.field input[type="time"] { width:100%; min-width:0; max-width:100%; box-sizing:border-box; }
