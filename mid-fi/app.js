@@ -23,15 +23,17 @@ const scenarios = {
       { id:"switch",icon:"↗",iconClass:"switch",title:"Switch to Metro",subtitle:"Walk to Crows Nest · 1 transfer",leaveBy:"8:09",minutes:50,arrival:"8:56",seat:2,crowd:2,walk:15,transfers:1,reliability:92,status:"Standing possible",tone:"",detail:"Reliable, but slower door to door for this journey." }
     ]
   },
+  // Scenario 1 follows Beomhui's "A More Comfortable Journey Home" and Haruna's UX story:
+  // 5:30 pm, leaving UTS after classes, peak-hour trains, "Need a seat", Why?, later service ~10 min longer.
   capacity: {
-    clock:"17:26", overline:"WEDNESDAY · HEADING HOME", greeting:"Evening, Alex", alertClass:"capacity", alertIcon:"!",
-    alertTitle:"Buses arriving near capacity", alertCopy:"Only limited boarding expected at Wynyard. Usually eases after 18:00 · updated 1 min ago.",
-    confidence:72, updated:"1 min ago", target:"18:08",
-    trip:["Wynyard","Wollstonecraft","Leave from 17:30","Arrive by 18:08"],
+    clock:"17:30", overline:"TUESDAY · AFTER UNI", greeting:"Evening, Alex", alertClass:"capacity", alertIcon:"!",
+    alertTitle:"Peak-hour crowding at Central", alertCopy:"Platforms are busier than usual. North Shore trains are very full until about 18:00 · updated 1 min ago.",
+    confidence:74, updated:"1 min ago", target:"18:05",
+    trip:["UTS (Central)","Wollstonecraft","Leave from 17:30","Arrive by 18:05"],
     options:[
-      { id:"take",icon:"→",iconClass:"",title:"Try the next bus",subtitle:"Route 254 · Stand B · departs 17:34",leaveBy:"17:30",minutes:42,arrival:"18:08",seat:0,crowd:3,walk:4,transfers:0,reliability:58,status:"Boarding constrained",tone:"warn",detail:"Fast if you board, but only a few passengers may be accepted." },
-      { id:"wait",icon:"Ⅱ",iconClass:"wait",title:"Wait for the following bus",subtitle:"Route 254 · departs 17:43",leaveBy:"17:39",minutes:51,arrival:"18:17",seat:3,crowd:2,walk:4,transfers:0,reliability:76,status:"Boarding more likely",tone:"good",detail:"The visible queue should clear on the first bus." },
-      { id:"switch",icon:"↗",iconClass:"switch",title:"Take a different bus",subtitle:"Route 265 · 7 min walk · departs 17:40",leaveBy:"17:33",minutes:50,arrival:"18:16",seat:2,crowd:2,walk:11,transfers:0,reliability:81,status:"Standing likely",tone:"",detail:"Avoids this queue, but adds seven minutes of walking." }
+      { id:"take",icon:"→",iconClass:"",title:"Take the next train",subtitle:"Departs 17:38 · Platform 16",leaveBy:"17:30",minutes:30,arrival:"18:00",seat:0,crowd:3,walk:8,transfers:0,reliability:84,status:"Seat unlikely",tone:"warn",detail:"Fastest option, but this peak-hour train is crowded and you're unlikely to get a seat." },
+      { id:"wait",icon:"Ⅱ",iconClass:"wait",title:"Wait for a later train",subtitle:"Departs 17:48 · +10 min",leaveBy:"17:40",minutes:40,arrival:"18:10",seat:4,crowd:2,walk:8,transfers:0,reliability:86,status:"Seat likely",tone:"good",detail:"About 10 minutes longer, but the first peak rush clears, so it's less crowded and a seat is likely." },
+      { id:"switch",icon:"↗",iconClass:"switch",title:"Switch to Metro",subtitle:"Central → Crows Nest · 12 min walk home",leaveBy:"17:33",minutes:42,arrival:"18:12",seat:2,crowd:2,walk:16,transfers:0,reliability:90,status:"Seat possible",tone:"",detail:"Less crowded than the train, but adds 12 minutes of walking at the end." }
     ]
   }
 };
@@ -48,7 +50,7 @@ const weeklyRoutines = {
   ]},
   tue:{ template:"uni", title:"University day", note:"Tuesday classes", badge:"STUDY", legs:[
     {label:"OUT",route:"Wollstonecraft → UTS",detail:"Train + 9 min walk",time:"9:05"},
-    {label:"HOME",route:"Central → Wollstonecraft",detail:"Train · direct",time:"16:40"}
+    {label:"HOME",route:"Central → Wollstonecraft",detail:"Train · busy at peak",time:"17:30"}
   ]},
   wed:{ template:"office", title:"Office day", note:"Your regular Wednesday", badge:"WORK", legs:[
     {label:"OUT",route:"Wollstonecraft → Wynyard",detail:"Train · direct",time:"8:15"},
@@ -179,6 +181,10 @@ function setScenario(id,persist=true){
   id=SCENARIO_ALIAS[id]||id;
   if(!scenarios[id]) return;
   state.scenario=id; state.selected=null;
+  if(id==="capacity"){ state.prefs=new Set(); $$('.chip').forEach(b=>{b.classList.remove('active');b.setAttribute('aria-pressed','false');}); }
+  const day=id==="capacity"?"tue":"wed"; state.day=day;
+  $$('.day').forEach(b=>{const on=b.dataset.day===day;b.classList.toggle('active',on);b.setAttribute('aria-selected',String(on));});
+  renderWeeklyRoutine();
   if(persist){try{localStorage.setItem('waywise-scenario',id);}catch(e){}}
   $$('.scenario').forEach(b=>{const on=b.dataset.scenario===id;b.classList.toggle('active',on);b.setAttribute('aria-pressed',String(on));});
   render();
@@ -288,7 +294,7 @@ try{savedScenario=localStorage.getItem('waywise-scenario');}catch(e){}
 if(scenarios[savedScenario]) state.scenario=savedScenario;
 const urlScenario=SCENARIO_ALIAS[demoParams.get('scenario')]||demoParams.get('scenario');
 if(scenarios[urlScenario]) state.scenario=urlScenario;
-$$('.scenario').forEach(b=>{const on=b.dataset.scenario===state.scenario;b.classList.toggle('active',on);b.setAttribute('aria-pressed',String(on));});
+setScenario(state.scenario,false);
 document.addEventListener('keydown',event=>{if(event.key==='Escape') closeSheet();});
 const requestedScreen=demoParams.get("screen");
 const requestedDay=demoParams.get("day");
