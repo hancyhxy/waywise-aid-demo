@@ -93,3 +93,18 @@ html,body { background:#e9e9e9; }
 .plan-edit { display:block; margin-top:8px; padding:0; }
 .saved-trip[data-template] { cursor:pointer; }
 .route-card.chosen { background:#eef3fd; }
+
+/* Heuristic-evaluation fixes (I01–I10) */
+.leave-by { margin:-5px 0 7px !important; color:#222 !important; font-size:9px !important; }
+.metric.crowd-1 { background:#e7f3ea; color:#2f6e43; }
+.metric.crowd-2 { background:#fff4dc; color:#8a5a00; }
+.metric.crowd-3 { background:#fbe9e7; color:#a33a2b; }
+.route-time em.late { font-style:normal; color:#a33a2b; font-weight:700; }
+.tradeoff { margin:0 0 10px; padding:10px 12px; border:1px solid #e3b4ad; border-radius:12px; background:#fdf1ef; font-size:10px; line-height:1.45; }
+.tradeoff .text-button { display:block; margin-top:4px; padding:0; font-size:10px; }
+.confidence-line { align-items:center; }
+.certainty { border:0; background:none; padding:0; color:var(--accent); font-size:9px; font-weight:700; cursor:pointer; }
+.certainty i { display:inline-block; width:6px; height:6px; margin-right:3px; border-radius:50%; }
+.certainty i.c-high { background:#3a8a55; } .certainty i.c-medium { background:#d39a1c; } .certainty i.c-low { background:#c0392b; }
+.scale { display:flex; justify-content:space-between; margin-top:2px; color:var(--muted); font-size:8px; }
+.alert-card.normal .alert-icon { background:#3a8a55; }
