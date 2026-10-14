@@ -1,7 +1,7 @@
 // crowd: 1 Low · 2 Moderate · 3 High. leaveBy = latest time to leave home and still catch it (I01).
 const scenarios = {
   disruption: {
-    clock:"8:06", alertClass:"", alertIcon:"!",
+    clock:"8:06", overline:"WEDNESDAY · OFFICE DAY", greeting:"Morning, Alex", alertClass:"", alertIcon:"!",
     alertTitle:"North Shore Line disruption",
     alertCopy:"Reduced frequency is increasing platform crowding. Recovery time unknown · updated 2 min ago, next update 8:15.",
     confidence:78, updated:"2 min ago", target:"8:58",
@@ -13,7 +13,7 @@ const scenarios = {
     ]
   },
   normal: {
-    clock:"8:06", alertClass:"normal", alertIcon:"✓",
+    clock:"8:06", overline:"WEDNESDAY · OFFICE DAY", greeting:"Morning, Alex", alertClass:"normal", alertIcon:"✓",
     alertTitle:"Your commute is running normally", alertCopy:"No current disruption. Usual weekday crowding expected · updated now.",
     confidence:91, updated:"just now", target:"8:46",
     trip:["Wollstonecraft","Wynyard","Leave from 8:08","Arrive by 8:46"],
@@ -24,14 +24,14 @@ const scenarios = {
     ]
   },
   capacity: {
-    clock:"17:26", alertClass:"capacity", alertIcon:"!",
+    clock:"17:26", overline:"WEDNESDAY · HEADING HOME", greeting:"Evening, Alex", alertClass:"capacity", alertIcon:"!",
     alertTitle:"Buses arriving near capacity", alertCopy:"Only limited boarding expected at Wynyard. Usually eases after 18:00 · updated 1 min ago.",
     confidence:72, updated:"1 min ago", target:"18:08",
-    trip:["Wynyard","Lane Cove","Leave from 17:30","Arrive by 18:08"],
+    trip:["Wynyard","Wollstonecraft","Leave from 17:30","Arrive by 18:08"],
     options:[
-      { id:"take",icon:"→",iconClass:"",title:"Try the next bus",subtitle:"Route 288 · Stand B · departs 17:34",leaveBy:"17:30",minutes:42,arrival:"18:08",seat:0,crowd:3,walk:4,transfers:0,reliability:58,status:"Boarding constrained",tone:"warn",detail:"Fast if you board, but only a few passengers may be accepted." },
-      { id:"wait",icon:"Ⅱ",iconClass:"wait",title:"Wait for the following bus",subtitle:"Route 288 · departs 17:43",leaveBy:"17:39",minutes:51,arrival:"18:17",seat:3,crowd:2,walk:4,transfers:0,reliability:76,status:"Boarding more likely",tone:"good",detail:"The visible queue should clear on the first bus." },
-      { id:"switch",icon:"↗",iconClass:"switch",title:"Take a different bus",subtitle:"Route 292 · 7 min walk · departs 17:40",leaveBy:"17:33",minutes:50,arrival:"18:16",seat:2,crowd:2,walk:11,transfers:0,reliability:81,status:"Standing likely",tone:"",detail:"Avoids this queue, but adds seven minutes of walking." }
+      { id:"take",icon:"→",iconClass:"",title:"Try the next bus",subtitle:"Route 254 · Stand B · departs 17:34",leaveBy:"17:30",minutes:42,arrival:"18:08",seat:0,crowd:3,walk:4,transfers:0,reliability:58,status:"Boarding constrained",tone:"warn",detail:"Fast if you board, but only a few passengers may be accepted." },
+      { id:"wait",icon:"Ⅱ",iconClass:"wait",title:"Wait for the following bus",subtitle:"Route 254 · departs 17:43",leaveBy:"17:39",minutes:51,arrival:"18:17",seat:3,crowd:2,walk:4,transfers:0,reliability:76,status:"Boarding more likely",tone:"good",detail:"The visible queue should clear on the first bus." },
+      { id:"switch",icon:"↗",iconClass:"switch",title:"Take a different bus",subtitle:"Route 265 · 7 min walk · departs 17:40",leaveBy:"17:33",minutes:50,arrival:"18:16",seat:2,crowd:2,walk:11,transfers:0,reliability:81,status:"Standing likely",tone:"",detail:"Avoids this queue, but adds seven minutes of walking." }
     ]
   }
 };
@@ -40,11 +40,11 @@ const toMin=t=>{const [h,m]=t.split("–")[0].split(":").map(Number);return h*60
 const lateBy=(o,target)=>Math.max(0,toMin(o.arrival.split("–").pop())-toMin(target));
 const certainty=c=>c>=85?"High":c>=70?"Medium":"Low";
 
-const state = { scenario:"disruption", prefs:new Set(["hurry"]), selected:null, day:"mon" };
+const state = { scenario:"disruption", prefs:new Set(["hurry"]), selected:null, day:"wed" };
 const weeklyRoutines = {
   mon:{ template:"office", title:"Office day", note:"Your regular Monday", badge:"WORK", legs:[
     {label:"OUT",route:"Wollstonecraft → Wynyard",detail:"Train · direct",time:"8:15"},
-    {label:"HOME",route:"Wynyard → Wollstonecraft",detail:"Train · quieter after 6",time:"17:32"}
+    {label:"HOME",route:"Wynyard → Wollstonecraft",detail:"Bus 254 · Stand B, or train",time:"17:30"}
   ]},
   tue:{ template:"uni", title:"University day", note:"Tuesday classes", badge:"STUDY", legs:[
     {label:"OUT",route:"Wollstonecraft → UTS",detail:"Train + 9 min walk",time:"9:05"},
@@ -52,7 +52,7 @@ const weeklyRoutines = {
   ]},
   wed:{ template:"office", title:"Office day", note:"Your regular Wednesday", badge:"WORK", legs:[
     {label:"OUT",route:"Wollstonecraft → Wynyard",detail:"Train · direct",time:"8:15"},
-    {label:"HOME",route:"Wynyard → Wollstonecraft",detail:"Train · direct",time:"17:32"}
+    {label:"HOME",route:"Wynyard → Wollstonecraft",detail:"Bus 254 · Stand B, or train",time:"17:30"}
   ]},
   thu:{ template:"uni", title:"University day", note:"Late-start Thursday", badge:"STUDY", legs:[
     {label:"OUT",route:"Wollstonecraft → UTS",detail:"Train + 9 min walk",time:"10:20"},
@@ -101,6 +101,8 @@ function render() {
   alert.className = `alert-card ${data.alertClass}`;
   $(".alert-icon").textContent = data.alertIcon;
   $(".status-bar span").textContent = data.clock;
+  $("#today-screen .app-header .overline").textContent = data.overline;
+  $("#today-label").textContent = data.greeting;
   $("#alert-title").textContent = data.alertTitle;
   $("#alert-copy").textContent = data.alertCopy;
   $(".confidence-line").innerHTML = `<span>Live data · updated ${data.updated}</span><button class="certainty" id="open-certainty"><i class="c-${certainty(data.confidence).toLowerCase()}"></i> Prediction certainty: ${certainty(data.confidence)} ⓘ</button>`;

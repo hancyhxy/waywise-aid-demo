@@ -16,8 +16,8 @@
   <link rel="manifest" href="manifest.webmanifest">
   <meta name="description" content="A mobile prototype for personalised commute decisions under crowding and disruption.">
   <title>Waywise — Mid-fidelity prototype</title>
-  <link rel="stylesheet" href="styles.css?v=202610141744">
-  <link rel="stylesheet" href="midfi.css?v=202610141744">
+  <link rel="stylesheet" href="styles.css?v=202610141756">
+  <link rel="stylesheet" href="midfi.css?v=202610141756">
 </head>
 <body>
   <div class="demo-shell">
@@ -45,7 +45,7 @@
       <section class="screen active" id="today-screen" aria-labelledby="today-label">
         <header class="app-header">
           <div>
-            <p class="overline">TUESDAY COMMUTE</p>
+            <p class="overline">WEDNESDAY · OFFICE DAY</p>
             <h2 id="today-label">Morning, Alex</h2>
           </div>
           <button class="avatar" id="open-scenarios" aria-label="Open demo scenario switcher">AL</button>
@@ -113,9 +113,9 @@
         </header>
 
         <div class="week-picker" role="tablist" aria-label="Choose a day">
-          <button class="day active" role="tab" aria-selected="true" data-day="mon"><small>M</small><strong>14</strong><i class="work"></i></button>
+          <button class="day" role="tab" aria-selected="false" data-day="mon"><small>M</small><strong>14</strong><i class="work"></i></button>
           <button class="day" role="tab" aria-selected="false" data-day="tue"><small>T</small><strong>15</strong><i class="uni"></i></button>
-          <button class="day" role="tab" aria-selected="false" data-day="wed"><small>W</small><strong>16</strong><i class="work"></i></button>
+          <button class="day active" role="tab" aria-selected="true" data-day="wed"><small>W</small><strong>16</strong><i class="work"></i></button>
           <button class="day" role="tab" aria-selected="false" data-day="thu"><small>T</small><strong>17</strong><i class="uni"></i></button>
           <button class="day" role="tab" aria-selected="false" data-day="fri"><small>F</small><strong>18</strong><i class="home"></i></button>
           <button class="day" role="tab" aria-selected="false" data-day="sat"><small>S</small><strong>19</strong><i class="personal"></i></button>
@@ -245,6 +245,6 @@
       </section>
     </main>
   </div>
-  <script src="app.js?v=202610141744"></script>
+  <script src="app.js?v=202610141756"></script>
 </body>
 </html>
