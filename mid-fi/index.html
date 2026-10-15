@@ -59,7 +59,7 @@
             </div>
             <div class="journey-line" aria-hidden="true"><i></i><span>→</span><i></i></div>
             <div class="align-right">
-              <span class="place">Wynyard</span>
+              <span class="place">Chatswood (work)</span>
               <span class="time">Arrive by 8:58</span>
             </div>
           </div>
@@ -113,11 +113,11 @@
         </header>
 
         <div class="week-picker" role="tablist" aria-label="Choose a day">
-          <button class="day" role="tab" aria-selected="false" data-day="mon"><small>M</small><strong>14</strong><i class="work"></i></button>
+          <button class="day" role="tab" aria-selected="false" data-day="mon"><small>M</small><strong>14</strong><i class="uni"></i></button>
           <button class="day" role="tab" aria-selected="false" data-day="tue"><small>T</small><strong>15</strong><i class="uni"></i></button>
           <button class="day active" role="tab" aria-selected="true" data-day="wed"><small>W</small><strong>16</strong><i class="work"></i></button>
           <button class="day" role="tab" aria-selected="false" data-day="thu"><small>T</small><strong>17</strong><i class="uni"></i></button>
-          <button class="day" role="tab" aria-selected="false" data-day="fri"><small>F</small><strong>18</strong><i class="home"></i></button>
+          <button class="day" role="tab" aria-selected="false" data-day="fri"><small>F</small><strong>18</strong><i class="work"></i></button>
           <button class="day" role="tab" aria-selected="false" data-day="sat"><small>S</small><strong>19</strong><i class="personal"></i></button>
           <button class="day" role="tab" aria-selected="false" data-day="sun"><small>S</small><strong>20</strong><i></i></button>
         </div>
@@ -128,20 +128,20 @@
           <div><p class="overline">SAVED TEMPLATES</p><h3>Reuse a routine</h3></div>
           <button class="text-button" id="edit-week">Edit week</button>
         </div>
-        <article class="saved-trip featured" data-template="office" role="button" tabindex="0" aria-label="Use Office day template">
+        <article class="saved-trip featured" data-template="office" role="button" tabindex="0" aria-label="Use Work shift template">
           <span class="saved-icon train">W</span>
-          <div><strong>Office day</strong><p>Wollstonecraft → Wynyard</p><small>Out 8:15 · Return 17:30</small></div>
-          <span class="service-status good">M · W</span>
+          <div><strong>Work shift</strong><p>UTS → Chatswood</p><small>Out 17:45 · Return 21:30</small></div>
+          <span class="service-status good">W · F</span>
         </article>
         <article class="saved-trip" data-template="uni" role="button" tabindex="0" aria-label="Use University day template">
           <span class="saved-icon bus">U</span>
           <div><strong>University day</strong><p>Home → UTS</p><small>Out 9:10 · Return 16:00</small></div>
-          <span class="service-status">T · T</span>
+          <span class="service-status">M · T · T</span>
         </article>
         <article class="saved-trip" data-template="remote" role="button" tabindex="0" aria-label="Use Remote day template">
           <span class="saved-icon home">H</span>
           <div><strong>Remote day</strong><p>No commute alerts</p><small>Notifications paused</small></div>
-          <span class="service-status">F</span>
+          <span class="service-status">Any day</span>
         </article>
       </section>
 
@@ -222,14 +222,14 @@
         </div>
         <p class="form-label">2. Start from</p>
         <div class="template-toggles" id="routine-templates" role="group" aria-label="Template">
-          <button data-template="office">Office day</button><button data-template="uni">University day</button><button data-template="remote">No commute</button><button data-template="custom">Custom</button>
+          <button data-template="office">Work shift</button><button data-template="uni">University day</button><button data-template="remote">No commute</button><button data-template="custom">Custom</button>
         </div>
         <div id="routine-fields">
           <p class="form-label">3. Journey details</p>
           <label class="field"><span>Name</span><input id="r-name" placeholder="e.g. Gym day"></label>
           <div class="field-row">
             <label class="field"><span>From</span><input id="r-from" placeholder="e.g. Wollstonecraft"></label>
-            <label class="field"><span>To</span><input id="r-to" placeholder="e.g. Wynyard"></label>
+            <label class="field"><span>To</span><input id="r-to" placeholder="e.g. Chatswood"></label>
           </div>
           <div class="field-row">
             <label class="field"><span>Leave at</span><input id="r-out" type="time" value="08:15"></label>

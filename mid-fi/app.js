@@ -4,7 +4,7 @@ const scenarios = {
   // 5:45 pm, uni finished late, running late for part-time job; next train fastest but standing;
   // waiting adds ~9 min and may make him late; Metro needs more walking + a transfer and is less certain.
   disruption: {
-    clock:"17:45", overline:"TUESDAY · TO WORK", greeting:"Evening, Alex", alertClass:"", alertIcon:"!",
+    clock:"17:45", overline:"WEDNESDAY · TO WORK", greeting:"Evening, Alex", alertClass:"", alertIcon:"!",
     alertTitle:"North Shore Line disruption",
     alertCopy:"Reduced service is making platforms more crowded. Recovery time unknown · updated 2 min ago, next update 18:00.",
     confidence:76, updated:"2 min ago", target:"18:30",
@@ -18,7 +18,7 @@ const scenarios = {
   // Scenario 3 "Unexpected Disruption on the Way Home": 7:20 pm after work, usual line delayed by an incident,
   // limited information; compare alternatives (bus or a different line) and pick the most reliable.
   normal: {
-    clock:"19:20", overline:"TUESDAY · HEADING HOME", greeting:"Evening, Alex", alertClass:"", alertIcon:"!",
+    clock:"19:20", overline:"FRIDAY · HEADING HOME", greeting:"Evening, Alex", alertClass:"", alertIcon:"!",
     alertTitle:"Delays on your usual line",
     alertCopy:"North Shore Line trains delayed after an incident at Artarmon. Expected delay 20+ min · recovery time unknown · updated 1 min ago.",
     confidence:62, updated:"1 min ago", target:"19:55",
@@ -50,23 +50,26 @@ const certainty=c=>c>=85?"High":c>=70?"Medium":"Low";
 
 const state = { scenario:"disruption", prefs:new Set(["hurry"]), selected:null, day:"wed" };
 const weeklyRoutines = {
-  mon:{ template:"office", title:"Office day", note:"Your regular Monday", badge:"WORK", legs:[
-    {label:"OUT",route:"Wollstonecraft → Wynyard",detail:"Train · direct",time:"8:15"},
-    {label:"HOME",route:"Wynyard → Wollstonecraft",detail:"Bus 254 · Stand B, or train",time:"17:30"}
+  mon:{ template:"uni", title:"University day", note:"Monday classes", badge:"STUDY", legs:[
+    {label:"OUT",route:"Wollstonecraft → UTS",detail:"Train + 9 min walk",time:"9:05"},
+    {label:"HOME",route:"Central → Wollstonecraft",detail:"Train · busy at peak",time:"17:30"}
   ]},
   tue:{ template:"uni", title:"University day", note:"Tuesday classes", badge:"STUDY", legs:[
     {label:"OUT",route:"Wollstonecraft → UTS",detail:"Train + 9 min walk",time:"9:05"},
     {label:"HOME",route:"Central → Wollstonecraft",detail:"Train · busy at peak",time:"17:30"}
   ]},
-  wed:{ template:"office", title:"Office day", note:"Your regular Wednesday", badge:"WORK", legs:[
-    {label:"OUT",route:"Wollstonecraft → Wynyard",detail:"Train · direct",time:"8:15"},
-    {label:"HOME",route:"Wynyard → Wollstonecraft",detail:"Bus 254 · Stand B, or train",time:"17:30"}
+  wed:{ template:"office", title:"Work shift", note:"Retail shift after class", badge:"WORK", legs:[
+    {label:"OUT",route:"UTS → Chatswood",detail:"Train · North Shore Line",time:"17:45"},
+    {label:"HOME",route:"Chatswood → Wollstonecraft",detail:"Train · direct",time:"21:30"}
   ]},
   thu:{ template:"uni", title:"University day", note:"Late-start Thursday", badge:"STUDY", legs:[
     {label:"OUT",route:"Wollstonecraft → UTS",detail:"Train + 9 min walk",time:"10:20"},
     {label:"HOME",route:"Central → Wollstonecraft",detail:"Train · direct",time:"19:10"}
   ]},
-  fri:{ title:"Remote day", note:"No commute planned", badge:"HOME", legs:[] },
+  fri:{ template:"office", title:"Work shift", note:"Afternoon retail shift", badge:"WORK", legs:[
+    {label:"OUT",route:"Wollstonecraft → Chatswood",detail:"Train · direct",time:"12:30"},
+    {label:"HOME",route:"Chatswood → Wollstonecraft",detail:"Train · North Shore Line",time:"19:20"}
+  ]},
   sat:{ title:"Personal trip", note:"Flexible weekend plan", badge:"PERSONAL", legs:[
     {label:"OUT",route:"Home → Circular Quay",detail:"Choose around live conditions",time:"11:30"}
   ]},
@@ -183,12 +186,13 @@ $("#reset-context").addEventListener("click",()=>{
   render();
 });
 const SCENARIO_ALIAS={"1":"capacity","2":"disruption","3":"normal"};
+const SCENARIO_DAY={capacity:"tue",disruption:"wed",normal:"fri"};
 function setScenario(id,persist=true){
   id=SCENARIO_ALIAS[id]||id;
   if(!scenarios[id]) return;
   state.scenario=id; state.selected=null;
   state.prefs=new Set(); $$('.chip').forEach(b=>{b.classList.remove('active');b.setAttribute('aria-pressed','false');});
-  const day="tue"; state.day=day;
+  const day=SCENARIO_DAY[id]||"tue"; state.day=day;
   $$('.day').forEach(b=>{const on=b.dataset.day===day;b.classList.toggle('active',on);b.setAttribute('aria-selected',String(on));});
   renderWeeklyRoutine();
   if(persist){try{localStorage.setItem('waywise-scenario',id);}catch(e){}}
@@ -230,7 +234,7 @@ $$('.day').forEach(button=>button.addEventListener('click',()=>{
   renderWeeklyRoutine();
 }));
 const templates={
-  office:{title:"Office day",badge:"WORK",dot:"work",from:"Wollstonecraft",to:"Wynyard",out:"08:15",back:"17:30",mode:"Train · direct"},
+  office:{title:"Work shift",badge:"WORK",dot:"work",from:"UTS",to:"Chatswood",out:"17:45",back:"21:30",mode:"Train · North Shore Line"},
   uni:{title:"University day",badge:"STUDY",dot:"uni",from:"Wollstonecraft",to:"UTS",out:"09:10",back:"16:00",mode:"Train + 9 min walk"},
   remote:{title:"Remote day",badge:"HOME",dot:"home",none:true},
   custom:{title:"",badge:"PERSONAL",dot:"personal",from:"",to:"",out:"08:15",back:"17:30",mode:"Choose around live conditions"}
