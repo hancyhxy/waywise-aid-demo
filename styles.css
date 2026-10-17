@@ -718,3 +718,24 @@ body.export .demo-notes { display:none; }
 .why-details[open] summary::after { transform:rotate(-90deg); }
 .why-details[open] summary { border-bottom:1px solid var(--line-2); margin-bottom:10px; }
 .why-details[open] { padding-bottom:13px; }
+
+/* ---------- v4.1 card visual language ---------- */
+.rc-main h4 { display:flex; align-items:center; gap:7px; }
+.kind-ic { flex:none; width:22px; height:22px; display:grid; place-items:center; border-radius:7px; background:var(--chip); color:#54585f; }
+.kind-ic svg { width:13px; height:13px; }
+.rc-status { gap:6px; }
+.st { padding:4px 9px; border-radius:8px; background:var(--chip); color:#4a4e55; font-size:11.5px; }
+.st i { display:none; }
+.st.crowd-3,.st.warn { background:var(--red-soft); color:var(--red-ink); }
+.st.crowd-2 { background:var(--amber-soft); color:var(--amber-ink); }
+.st.crowd-1,.st.good { background:var(--green-soft); color:var(--green-ink); }
+.st.focus { padding-bottom:4px; box-shadow:inset 0 0 0 1.5px var(--accent); }
+.jprog { display:block; position:relative; height:6px; margin-top:8px; border-radius:4px; background:var(--chip); }
+.jprog > span { position:absolute; top:0; bottom:0; left:0; border-radius:4px; background:var(--green); transition:width .3s; }
+.jprog > i { position:absolute; top:0; bottom:0; width:2px; background:var(--white); }
+.jprog > i:nth-of-type(1) { left:33.33%; }
+.jprog > i:nth-of-type(2) { left:66.66%; }
+.jprog-cap { display:flex; justify-content:space-between; align-items:baseline; margin:10px 0 0; padding-top:10px; border-top:1px solid var(--line-2); font-size:12px; color:#41454b; }
+.jprog-cap > b { font-size:13px; }
+.mini-bar .jprog.mini { height:3px; margin-top:6px; background:rgba(255,255,255,.22); }
+.mini-bar .jprog.mini > span { background:#7fd49c; }

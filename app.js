@@ -27,7 +27,9 @@ const ICON = {
   cloud: '<svg viewBox="0 0 24 24"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/><path d="m9 13 2 2 4-4"/></svg>',
   sparkle: '<svg viewBox="0 0 24 24"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/></svg>',
   sliders: '<svg viewBox="0 0 24 24"><path d="M21 4h-7M10 4H3M21 12h-9M8 12H3M21 20h-5M12 20H3M14 2v4M8 10v4M16 18v4"/></svg>',
-  route: '<svg viewBox="0 0 24 24"><circle cx="6" cy="19" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/><circle cx="18" cy="5" r="3"/></svg>'
+  route: '<svg viewBox="0 0 24 24"><circle cx="6" cy="19" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/><circle cx="18" cy="5" r="3"/></svg>',
+  go: '<svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>',
+  clock: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>'
 };
 
 /* Transport for NSW mode language: coloured roundel + white letter, line pill in the mode colour.
@@ -50,7 +52,7 @@ function legChain(o) {
 
 /* ---------- reference data ---------- */
 const CROWD = ["", "Low", "Moderate", "High"];
-const SEAT = ["Seat unlikely", "Seat unlikely", "Seat possible", "Seat more likely", "Seat likely"];
+const SEAT = ["Seat unlikely", "Seat unlikely", "Seat possible", "Seat likely", "Seat likely"];
 const seatTone = s => (s <= 1 ? "warn" : s >= 3 ? "good" : "");
 const relTone = r => (r >= 85 ? "good" : r < 70 ? "warn" : "");
 const certainty = c => (c >= 85 ? "High" : c >= 70 ? "Medium" : "Low");
@@ -435,32 +437,51 @@ function filterSaved(initial) {
   const nm = $("#search-layer .no-match"); if (nm) nm.hidden = shown > 0;
   const go = $("#search-layer .s-go"); if (go) go.hidden = untouched || !(q.from.trim() && q.to.trim());
 }
+/* Short label for the Recommended strip; the full sentence lives in Route details. */
+function reasonShort(o, d) {
+  const opts = d.options, p = state.prefs;
+  const checks = [
+    ["seat", o.seat >= Math.max(...opts.map(x => x.seat)) && o.seat >= 3, "best seat chance"],
+    ["sooner", arrEnd(o) <= Math.min(...opts.map(arrEnd)), "arrives earliest"],
+    ["reliable", o.reliability >= Math.max(...opts.map(x => x.reliability)), "most predictable"],
+    ["walk", o.walk <= Math.min(...opts.map(x => x.walk)), "least walking"],
+    ["wait", platformWait(o) <= Math.min(...opts.map(platformWait)), "shortest wait"]
+  ];
+  for (const [k, ok, t] of checks) if (p.has(k) && ok) return t;
+  for (const [, ok, t] of checks) if (ok) return t;
+  return "best overall fit";
+}
+const journeyProgress = () => Math.max(6, state.stage / 3 * 100);
 function routeCard(o, d, rec) {
   const isRec = o.id === rec.id, live = state.phase === "active" && o.id === state.selected, late = lateBy(o, d), p = state.prefs;
   const f = on => (on ? " focus" : "");
-  const conf = conflicts(o, d);
-  const strip = live ? `<div class="rec-strip live-strip"><span class="pulse"></span>In progress</div>`
-    : isRec ? `<div class="rec-strip">${ICON.sparkle}<span><b>Recommended</b> · ${esc(reason(o, d))}</span></div>` : "";
+  const conf = conflicts(o, d).filter(c => !c.startsWith("Arrives"));
+  const kind = { take: ICON.go, wait: ICON.clock, switch: ICON.swap, bus: ICON.swap }[o.kind] || ICON.go;
+  const strip = live ? `<div class="rec-strip live-strip"><span class="pulse"></span>In progress · ${STAGES[state.stage]}</div>`
+    : isRec ? `<div class="rec-strip">${ICON.sparkle}<span><b>Recommended</b> · ${reasonShort(o, d)}</span></div>` : "";
+  const mid = live
+    ? `<div class="jprog-cap"><b>${STAGES[state.stage]}</b><span>arrives <b>${o.arrives}</b></span></div>
+      <div class="jprog" role="img" aria-label="Journey progress: ${STAGES[state.stage]}"><span style="width:${journeyProgress()}%"></span><i></i><i></i></div>`
+    : `<p class="rc-times">Leave by <b>${o.leaveBy}</b> · ${esc(o.platform.split(",").pop().trim())}</p>`;
   return `<article class="route-card${isRec ? " recommended" : ""}${live ? " live" : ""}" data-route="${o.id}" data-act="open-route" data-id="${o.id}" role="button" tabindex="0" aria-label="${esc(o.title)}: view route details">
     ${strip}
     <div class="rc-body">
       <div class="rc-top">
         <div class="rc-main">
           ${legChain(o)}
-          <h4>${esc(o.title)}</h4>
-          <p class="rc-sub">${esc(o.service)}</p>
+          <h4><i class="kind-ic">${kind}</i>${esc(o.title)}</h4>
         </div>
         <div class="rc-arrive${f(p.has("sooner"))}"><small>Arrives</small><strong class="${o.arrives.length > 5 ? "range" : ""}${late ? " late" : ""}">${o.arrives}</strong>${late ? `<em class="late">${late} min late</em>` : d.target ? `<em class="ontime">On time</em>` : "<em>estimate</em>"}</div>
       </div>
-      <p class="rc-times">Leave by <b>${o.leaveBy}</b> · departs <b>${o.departs}</b> · ${esc(o.platform.split(",").pop().trim())}</p>
+      ${mid}
       <div class="rc-status">
-        <span class="st crowd-${o.crowd}${f(p.has("seat"))}"><i></i>${CROWD[o.crowd]} crowding</span>
+        <span class="st crowd-${o.crowd}${f(p.has("seat"))}">${CROWD[o.crowd]} crowding</span>
         <span class="st ${seatTone(o.seat)}${f(p.has("seat"))}">${SEAT[o.seat]}</span>
         <span class="st ${relTone(o.reliability)}${f(p.has("reliable"))}">${o.reliability}% on time</span>
         ${p.has("walk") ? `<span class="st focus">${o.walk} min walk</span>` : ""}
         ${p.has("transfer") ? `<span class="st focus">${o.transfers ? `${o.transfers} transfer` : "Direct"}</span>` : ""}
       </div>
-      ${conf.length ? `<p class="conflict">${ICON.warn}<span>${esc(conf[0])}${conf.length > 1 ? ` · +${conf.length - 1} more in details` : ""}</span></p>` : ""}
+      ${conf.length ? `<p class="conflict">${ICON.warn}<span>${esc(conf[0])}</span></p>` : ""}
       <div class="rc-foot">
         <span class="why-link">Details ›</span>
         ${live ? `<button class="btn primary sm" data-act="open-active">View journey</button>`
@@ -920,7 +941,7 @@ function renderMini() {
   const d = current(), o = state.phase === "active" ? selectedOption(d) : null, m = $("#mini-bar");
   const showIt = o && state.overlay !== "details";
   m.classList.toggle("show", !!showIt);
-  if (showIt) m.innerHTML = `<span class="pulse"></span><span class="mb-main"><b>In progress · ${esc(o.title)}</b><small>${STAGES[state.stage]} · arrives ${o.arrives}</small></span><span class="mb-open">Open ›</span>`;
+  if (showIt) m.innerHTML = `<span class="pulse"></span><span class="mb-main"><b>In progress · ${esc(o.title)}</b><small>${STAGES[state.stage]} · arrives ${o.arrives}</small><span class="jprog mini"><span style="width:${journeyProgress()}%"></span></span></span><span class="mb-open">Open ›</span>`;
 }
 function renderAll() {
   renderToday(); renderJourneys(); renderProfile(); renderMini();
