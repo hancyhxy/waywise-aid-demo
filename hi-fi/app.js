@@ -358,8 +358,8 @@ function renderToday() {
   $("#clock").textContent = state.clock;
   if (!d && !state.journeys.length) { el.innerHTML = renderFirstRun(); return; }
   const header = `<header class="app-header">
-      <div><p class="overline">${DAY_NAME[state.day].toUpperCase()} ${DAY_DATE[state.day]} OCT · ${state.clock}</p><h2>${greet(state.clock)}</h2></div>
-      <button class="avatar" data-act="tab" data-tab="profile" aria-label="Open Profile and account">AL</button>
+      <div><p class="overline">${DAY_NAME[state.day].toUpperCase()} ${DAY_DATE[state.day]} OCT</p><h2>${greet(state.clock)}</h2></div>
+      <button class="avatar" data-act="scenarios" aria-label="Open demo scenario switcher">AL</button>
     </header>`;
   if (!d) {
     el.innerHTML = `${header}
@@ -523,7 +523,7 @@ function renderFirstRun() {
   return `
     <header class="app-header">
       <div><p class="overline">WELCOME TO WAYWISE</p><h2>Hi, Alex</h2></div>
-      <button class="avatar" data-act="tab" data-tab="profile" aria-label="Open Profile and account">AL</button>
+      <button class="avatar" data-act="scenarios" aria-label="Open demo scenario switcher">AL</button>
     </header>
     <article class="empty-hero">
       <span class="empty-icon">${ICON.plus}</span>
@@ -621,10 +621,7 @@ function renderProfile() {
       ${toggle("actionable", "Actionable alerts only", "Notify me only when switching or waiting may help")}
       <p class="hint">To mute a single journey, turn off Alerts in its Route details.</p>
     </section>
-    <section class="block demo-only">
-      <p class="overline">PROTOTYPE</p>
-      <button class="btn ghost full" data-act="scenarios">Switch demo scenario</button>
-    </section>`;
+`;
 }
 
 /* ---------- render: Journey details + active ---------- */
