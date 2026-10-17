@@ -219,7 +219,7 @@ function score(o, d) {
 const ranked = d => [...d.options].sort((a, b) => score(b, d) - score(a, d));
 const selectedOption = d => d && d.options.find(o => o.id === state.selected);
 /* The route the user is looking at: Route details shows the preview; the active journey otherwise. */
-const focusId = () => (state.overlay === "details" ? state.preview : state.selected);
+const focusId = () => (state.overlay === "details" ? state.preview || state.selected : state.selected);
 const focusOption = d => d && d.options.find(o => o.id === focusId());
 
 function conflicts(o, d) {
@@ -356,7 +356,7 @@ function renderToday() {
 
   const prefBar = `<div class="filter-row" aria-label="Journey preferences">
       <button class="fchip${np ? " on" : ""}" data-act="prefs">${ICON.sliders}${np ? `Preferences · ${np}` : "Preferences"}</button>
-      ${PREFS.map(x => `<button class="fchip${state.prefs.has(x.id) ? " on" : ""}" data-act="pref" data-pref="${x.id}" role="checkbox" aria-checked="${state.prefs.has(x.id)}">${x.label}</button>`).join("")}
+      ${[...state.prefs].map(id => `<button class="fchip on" data-act="pref" data-pref="${id}" aria-label="Remove ${prefLabel(id)}">${prefLabel(id)} ×</button>`).join("")}
     </div>`;
   el.innerHTML = `${header}
     ${sharing}
@@ -380,7 +380,7 @@ function renderToday() {
         <button class="info-button" data-act="method" aria-label="How recommendations work">?</button>
       </div>
       ${prefBar}
-      ${np ? `<p class="pref-note">For this journey only: <b>${[...state.prefs].map(prefLabel).join(" · ")}</b> · <button class="btn link sm" data-act="save-default">Save as default</button> · <button class="btn link sm" data-act="reset-prefs">Reset</button></p>` : ""}
+      ${np ? `<p class="pref-note">For this journey only · <button class="btn link sm" data-act="save-default">Save as default</button> · <button class="btn link sm" data-act="reset-prefs">Reset</button></p>` : `<p class="pref-note">Using your default travel preferences · <button class="btn link sm" data-act="tab" data-tab="profile">View defaults</button></p>`}
       ${d.alert.tone === "green" ? "" : `<div class="alert-card ${d.alert.tone}" role="status">
         <div class="alert-icon">!</div>
         <div><span class="source">${esc(d.alert.source)}</span><strong>${esc(d.alert.title)}</strong><p>${esc(d.alert.copy)}</p><small>Updated ${d.alert.updated} · next update ${d.alert.next}</small></div>
@@ -471,7 +471,7 @@ function routeCard(o, d, rec) {
       <div class="rc-foot">
         <button class="why-link" data-act="why" data-id="${o.id}">Why this route? ›</button>
         ${live ? `<button class="btn primary sm" data-act="open-active">View journey</button>`
-      : state.phase === "active" ? `<button class="btn ghost sm" data-act="open-route" data-id="${o.id}">Details</button><button class="btn primary sm" data-act="switch-to" data-id="${o.id}">Switch</button>`
+      : state.phase === "active" ? `<button class="btn ghost sm" data-act="open-route" data-id="${o.id}">View details</button>`
         : `<button class="btn ghost sm" data-act="open-route" data-id="${o.id}">Details</button><button class="btn primary sm" data-act="start-route" data-id="${o.id}">Start</button>`}
       </div>
     </div>
@@ -631,20 +631,51 @@ function legsTimeline(o, d) {
   ];
   return `<ol class="timeline">${steps.map(s => `<li><span class="tl-icon">${s.icon}</span><div><strong>${esc(s.t)}</strong><small>${esc(s.s)}</small></div></li>`).join("")}</ol>`;
 }
-function renderDetails() {
+const STAGES = ["Walk to platform", "Board", "On board", "Arrived"];
+/* Journey drawer: one surface with phases — preview (decide), active (execute), arrived.
+   Same skeleton in every phase: header → time card → phase body → carriage → actions → CTA. */
+function renderJourney() {
   const d = current(), o = focusOption(d), el = $("#screen-details");
   if (!o) { el.innerHTML = ""; return; }
-  const late = lateBy(o, d), started = state.phase === "active", isLive = started && o.id === state.selected;
-  const cta = isLive ? `<button class="btn primary full" data-act="open-active">Open active journey</button>`
-    : started ? `<button class="btn primary full" data-act="switch-to" data-id="${o.id}">Switch to this route</button>`
+  const started = state.phase === "active";
+  const live = started && o.id === state.selected;
+  const cur = started ? selectedOption(d) : null;
+  const late = lateBy(o, d), st = state.stage, arrived = live && st === 3;
+  const status = live
+    ? `<span class="live-pill"><span class="pulse"></span>${arrived ? "Arrived" : "In progress"}</span>`
+    : `<span class="status-pill">${started ? "Not your current route" : "Not started yet"}</span>`;
+  let switchDiff = "";
+  if (started && !live && cur) {
+    const a = arrEnd(o) - arrEnd(cur), parts = [];
+    parts.push(a === 0 ? "Same arrival as your current route" : a > 0 ? `Arrives ${a} min later than your current route` : `Arrives ${-a} min earlier than your current route`);
+    if (o.seat !== cur.seat) parts.push(o.seat > cur.seat ? "better seat chance" : "lower seat chance");
+    if (o.walk !== cur.walk) parts.push(o.walk > cur.walk ? `${o.walk - cur.walk} min more walking` : `${cur.walk - o.walk} min less walking`);
+    switchDiff = `<p class="switch-diff">${ICON.compare}<span>${parts.join(" · ")}</span></p>`;
+  }
+  const wait = toMin(o.departs) - toMin(state.clock);
+  const next = [
+    { t: `Walk to ${o.platform}`, s: `${o.service} departs ${o.departs}${wait > 0 ? ` (in ${wait} min)` : ""}`, b: "I'm on the platform" },
+    { t: `Board ${o.mode === "bus" ? "the bus" : `carriage ${o.cars ? o.cars.indexOf(Math.min(...o.cars)) + 1 : ""}`}`.trim(), s: o.cars ? "Fewest people expected near the " + (o.cars.indexOf(Math.min(...o.cars)) + 1 > o.cars.length / 2 ? "rear" : "front") : "Whole-bus estimate only", b: "I've boarded" },
+    { t: "On board", s: `Arriving ${o.arrives}. No action needed unless something changes.`, b: "I've arrived" },
+    { t: `You've arrived at ${d.to}`, s: "Thanks for travelling with Waywise.", b: null }
+  ][st];
+  const liveBody = `
+    <ol class="stepper">${STAGES.map((s, i) => `<li class="${i < st ? "done" : i === st ? "now" : ""}"><i>${i < st ? ICON.check : i + 1}</i><span>${s}</span></li>`).join("")}</ol>
+    <article class="next-card"><p class="overline">${st < 3 ? "NEXT STEP" : "DONE"}</p><strong>${esc(next.t)}</strong><p>${esc(next.s)}</p>
+      ${next.b ? `<button class="btn primary sm" data-act="advance">${next.b}</button>` : `<button class="btn primary sm" data-act="end">End journey</button>`}</article>
+    ${st === 1 || st === 2 ? reminderCard(o, d) : ""}
+    ${st < 2 ? `<button class="board-help" data-act="compare" data-mode="board">${ICON.warn}<span><b>Too full to board, or delayed?</b><small>See the next service and other routes with their trade-offs</small></span><i>›</i></button>` : ""}`;
+  const cta = live ? ""
+    : started ? `<button class="btn primary full" data-act="switch-ask" data-id="${o.id}">Switch to this route</button>`
       : `<button class="btn primary full" data-act="start">Start journey</button>`;
   el.innerHTML = `
     <div class="drawer-top"><button class="grab" data-act="close-drawer" aria-label="Collapse"></button><button class="drawer-x" data-act="close-drawer" aria-label="Close">×</button></div>
-    <p class="overline">ROUTE DETAILS</p>
+    <p class="overline">${live ? "YOUR JOURNEY" : "ROUTE DETAILS"}</p>
     <h2 class="title">${esc(o.title)}</h2>
     <p class="muted">${esc(d.from)} → ${esc(d.to)}</p>
-    <span class="status-pill${isLive ? " on" : ""}">${isLive ? "Journey in progress" : started ? "Not your current route" : "Not started yet"}</span>
-    <article class="summary-card">
+    ${status}
+    ${live && state.sharing?.live ? `<div class="share-banner">${ICON.share}<span>Sharing arrival updates with <b>${esc(state.sharing.to)}</b> · ${esc(state.sharing.until)}</span><button class="btn link sm" data-act="stop-share">Stop</button></div>` : ""}
+    <article class="summary-card${live ? " live" : ""}">
       <div class="timegrid big">
         <div><small>Leave by</small><strong>${o.leaveBy}</strong></div>
         <div><small>Departs</small><strong>${o.departs}</strong><em>${esc(o.platform)}</em></div>
@@ -652,46 +683,17 @@ function renderDetails() {
       </div>
       <p class="conf-row"><i class="c-${certainty(d.confidence).toLowerCase()}"></i>Arrival estimate confidence: <b>${certainty(d.confidence)}</b> · updated ${d.alert.updated}</p>
     </article>
-    ${legsTimeline(o, d)}
-    <section class="block"><p class="overline">CROWDING BY CARRIAGE</p><h3>Where to board</h3>${carriageDiagram(o, d)}</section>
-    <div class="toggle-card"><span>${ICON.bell}<span><strong>Alerts for this journey</strong><small>${state.alertsOn ? "On: we'll tell you if this service is delayed or gets too crowded." : "Off: you won't be notified about changes to this journey."}</small></span></span><button class="toggle${state.alertsOn ? " active" : ""}" data-act="toggle" data-key="alertsOn" aria-pressed="${state.alertsOn}"><i></i></button></div>
+    ${switchDiff}
+    ${live ? liveBody : legsTimeline(o, d)}
+    ${!arrived ? `<section class="block"><p class="overline">CROWDING BY CARRIAGE</p><h3>Where to board</h3>${carriageDiagram(o, d)}</section>` : ""}
+    ${live ? "" : `<div class="toggle-card"><span>${ICON.bell}<span><strong>Alerts for this journey</strong><small>${state.alertsOn ? "On: we'll tell you if this service is delayed or gets too crowded." : "Off: you won't be notified about changes to this journey."}</small></span></span><button class="toggle${state.alertsOn ? " active" : ""}" data-act="toggle" data-key="alertsOn" aria-pressed="${state.alertsOn}"><i></i></button></div>`}
     <div class="action-list">
       <button data-act="compare">${ICON.compare}<span>Compare alternatives</span><i>›</i></button>
       <button data-act="report">${ICON.flag}<span>Report carriage conditions</span><i>›</i></button>
       <button data-act="share">${ICON.share}<span>${state.sharing?.live ? "Sharing arrival updates" : "Share journey"}</span><i>›</i></button>
     </div>
-    <div class="sticky-cta">${cta}</div>`;
-}
-const STAGES = ["Walk to platform", "Board", "On board", "Arrived"];
-function renderActive() {
-  const d = current(), o = selectedOption(d), el = $("#screen-active");
-  if (!o) { el.innerHTML = ""; return; }
-  const st = state.stage, wait = toMin(o.departs) - toMin(state.clock);
-  const next = [
-    { t: `Walk to ${o.platform}`, s: `${o.service} departs ${o.departs}${wait > 0 ? ` (in ${wait} min)` : ""}`, b: "I'm on the platform" },
-    { t: `Board ${o.mode === "bus" ? "the bus" : `carriage ${o.cars ? o.cars.indexOf(Math.min(...o.cars)) + 1 : ""}`}`.trim(), s: o.cars ? "Fewest people expected near the " + (o.cars.indexOf(Math.min(...o.cars)) + 1 > o.cars.length / 2 ? "rear" : "front") : "Whole-bus estimate only", b: "I've boarded" },
-    { t: "On board", s: `Arriving ${o.arrives}. No action needed unless something changes.`, b: "I've arrived" },
-    { t: `You've arrived at ${d.to}`, s: "Thanks for travelling with Waywise.", b: null }
-  ][st];
-  el.innerHTML = `
-    <div class="drawer-top"><button class="grab" data-act="close-drawer" aria-label="Collapse"></button><button class="drawer-x" data-act="close-drawer" aria-label="Close">×</button></div>
-    <span class="live-pill"><span class="pulse"></span>In progress</span>
-    <p class="overline" style="margin-top:10px">${esc(d.from.toUpperCase())} → ${esc(d.to.toUpperCase())}</p>
-    <h2 class="title">${esc(o.title)}</h2>
-    ${state.sharing?.live ? `<div class="share-banner">${ICON.share}<span>Sharing arrival updates with <b>${esc(state.sharing.to)}</b> · ${esc(state.sharing.until)}</span><button class="btn link sm" data-act="stop-share">Stop</button></div>` : ""}
-    <article class="eta-card"><small>Estimated arrival</small><strong>${o.arrives}</strong><span>${lateBy(o, d) ? `${lateBy(o, d)} min after your ${d.target} ${d.targetLabel}` : d.target ? `On time for your ${d.target} ${d.targetLabel}` : "Estimate"} · confidence ${certainty(d.confidence)}</span></article>
-    <ol class="stepper">${STAGES.map((s, i) => `<li class="${i < st ? "done" : i === st ? "now" : ""}"><i>${i < st ? ICON.check : i + 1}</i><span>${s}</span></li>`).join("")}</ol>
-    <article class="next-card"><p class="overline">${st < 3 ? "NEXT STEP" : "DONE"}</p><strong>${esc(next.t)}</strong><p>${esc(next.s)}</p>
-      ${next.b ? `<button class="btn primary sm" data-act="advance">${next.b}</button>` : `<button class="btn primary sm" data-act="end">End journey</button>`}</article>
-    ${st === 1 || st === 2 ? reminderCard(o, d) : ""}
-    ${st < 2 ? `<button class="board-help" data-act="compare" data-mode="board">${ICON.warn}<span><b>Too full to board, or delayed?</b><small>See the next service and other routes with their trade-offs</small></span><i>›</i></button>` : ""}
-    ${st < 3 ? `<section class="block"><p class="overline">CROWDING BY CARRIAGE</p>${carriageDiagram(o, d)}</section>` : ""}
-    <div class="action-list">
-      <button data-act="compare">${ICON.compare}<span>Compare alternatives</span><i>›</i></button>
-      <button data-act="report">${ICON.flag}<span>Report carriage conditions</span><i>›</i></button>
-      <button data-act="share">${ICON.share}<span>${state.sharing?.live ? "Sharing arrival updates" : "Share journey"}</span><i>›</i></button>
-    </div>
-    ${st < 3 ? `<button class="btn ghost full danger end-btn" data-act="end-ask">End journey</button><p class="hint center">You can end the journey at any time.</p>` : ""}`;
+    ${live && st < 3 ? `<button class="btn ghost full danger end-btn" data-act="end-ask">End journey</button><p class="hint center">You can end the journey at any time.</p>` : ""}
+    ${cta ? `<div class="sticky-cta">${cta}</div>` : ""}`;
 }
 /* Arrival reminder (extra, not in the evaluation list): needs location, falls back to the timetable. */
 function reminderCard(o, d) {
@@ -763,6 +765,13 @@ const SHEETS = {
         <div class="split"><button class="btn link sm" data-act="reset-prefs" ${n ? "" : "disabled"}>Reset</button><button class="btn link sm" data-act="save-default" ${n ? "" : "disabled"}>Save as default</button></div>
       </div>`;
   },
+  switchConfirm(id) {
+    const d = current(), o = d.options.find(x => x.id === id), cur = selectedOption(d);
+    const a = cur ? arrEnd(o) - arrEnd(cur) : 0;
+    return `<p class="overline">SWITCH ROUTE</p><h3>Switch to ${esc(o.title.toLowerCase())}?</h3>
+      <p class="sheet-lede">Your current journey (${esc(cur ? cur.title.toLowerCase() : "")}) ends and this one starts from your current step. ${a === 0 ? "Arrival stays the same" : a > 0 ? `You'd arrive <b>${a} min later</b>` : `You'd arrive <b>${-a} min earlier</b>`} (${o.arrives}).${state.sharing?.live ? ` <b>${esc(state.sharing.to)}</b> keeps getting updates on the new route.` : ""}${state.reminder ? " Your arrival reminder moves to the new route." : ""}</p>
+      <div class="sheet-actions"><button class="btn primary full" data-act="switch-to" data-id="${o.id}">Switch route</button><button class="btn ghost full" data-act="close-sheet">Keep current journey</button></div>`;
+  },
   endConfirm() {
     const o = selectedOption(current());
     return `<p class="overline">END JOURNEY</p><h3>End this journey?</h3>
@@ -800,7 +809,7 @@ const SHEETS = {
     return `<p class="overline">${mode === "board" ? "CAN'T BOARD OR DELAYED?" : "COMPARE ALTERNATIVES"}</p><h3>Other ways to ${esc(d.to)}</h3>
       <p class="sheet-lede">Compared with <b>${esc(cur.title.toLowerCase())}</b> (arrives ${cur.arrives}).${mode === "board" ? " If this service is too full to board, the next service and other routes are below." : ""}</p>
       ${alts.map(o => `<article class="alt-card"><div><strong>${esc(o.title)}</strong><small>Departs ${o.departs} · arrives ${o.arrives} · ${CROWD[o.crowd].toLowerCase()} crowding</small><p>${diff(o)}</p></div>
-        <button class="btn primary sm" data-act="switch-to" data-id="${o.id}">Switch</button></article>`).join("")}
+        <button class="btn primary sm" data-act="${state.phase === "active" ? "switch-ask" : "switch-to"}" data-id="${o.id}">Switch</button></article>`).join("")}
       <button class="btn ghost full" data-act="close-sheet">Keep ${esc(cur.title.toLowerCase())}</button>`;
   },
   report(step) {
@@ -936,14 +945,13 @@ function show() {
 }
 function renderMini() {
   const d = current(), o = state.phase === "active" ? selectedOption(d) : null, m = $("#mini-bar");
-  const showIt = o && state.overlay !== "active";
+  const showIt = o && state.overlay !== "details";
   m.classList.toggle("show", !!showIt);
   if (showIt) m.innerHTML = `<span class="pulse"></span><span class="mb-main"><b>In progress · ${esc(o.title)}</b><small>${STAGES[state.stage]} · arrives ${o.arrives}</small></span><span class="mb-open">Open ›</span>`;
 }
 function renderAll() {
   renderToday(); renderJourneys(); renderProfile(); renderMini();
-  if (state.overlay === "details") renderDetails();
-  if (state.overlay === "active") renderActive();
+  if (state.overlay === "details") renderJourney();
 }
 function setTab(tab) { state.tab = tab; state.overlay = null; show(); $(`#screen-${tab}`).scrollTop = 0; }
 function openOverlay(name) { state.overlay = name; show(); $(`#screen-${name}`).scrollTop = 0; }
@@ -1002,9 +1010,10 @@ const A = {
     $("#toast").classList.remove("show"); openOverlay("details"); toast("Journey not started", "Nothing changed. Start when you're ready.");
   },
   "end-ask": () => openSheet("endConfirm"),
+  "switch-ask": b => openSheet("switchConfirm", b.dataset.id),
   reminder: () => {
-    if (state.reminder) { state.reminder = null; renderActive(); return; }
-    if (state.locPerm === "allowed") { state.reminder = "location"; renderActive(); toast("Arrival reminder on", "Using your location."); return; }
+    if (state.reminder) { state.reminder = null; renderJourney(); return; }
+    if (state.locPerm === "allowed") { state.reminder = "location"; renderJourney(); toast("Arrival reminder on", "Using your location."); return; }
     openPerm();
   },
   "perm-ask": () => openPerm(),
@@ -1012,18 +1021,18 @@ const A = {
     const v = b.dataset.v; $("#perm").classList.remove("open");
     if (v === "deny") { state.locPerm = "denied"; state.reminder = "timetable"; toast("Reminder by timetable", "Location is off, so the reminder may be less accurate."); }
     else { state.locPerm = v === "once" ? "once" : "allowed"; state.reminder = "location"; toast("Arrival reminder on", "Using your location only on this device."); }
-    renderActive(); renderMini();
+    renderJourney(); renderMini();
   },
-  start: () => { state.selected = state.preview; state.phase = "active"; state.stage = 0; state.reminder = null; openOverlay("active"); toast("Journey started", state.alertsOn ? "We'll alert you if anything changes." : "Alerts are off for this journey.", { act: "undo-start", label: "Undo" }); },
-  "open-active": () => openOverlay("active"),
+  start: () => { state.selected = state.preview; state.phase = "active"; state.stage = 0; state.reminder = null; openOverlay("details"); toast("Journey started", state.alertsOn ? "We'll alert you if anything changes." : "Alerts are off for this journey.", { act: "undo-start", label: "Undo" }); },
+  "open-active": () => { state.preview = state.selected; openOverlay("details"); },
   advance: () => { state.stage = Math.min(3, state.stage + 1); if (state.stage === 3 && state.sharing?.live && state.sharing.until === "Until I arrive") { state.sharing = null; toast("Sharing stopped", "You've arrived, so arrival updates ended automatically."); } renderAll(); },
   end: () => { const wasSharing = state.sharing?.live; closeSheet(); resetJourneyState(); state.reminder = null; setTab("today"); toast("Journey ended", wasSharing ? "Arrival updates stopped." : ""); },
   compare: b => openSheet("compare", b.dataset.mode),
   "switch-to": b => {
     const d = current(), o = d.options.find(x => x.id === b.dataset.id);
     closeSheet();
-    if (state.phase !== "active") { state.preview = o.id; renderDetails(); $("#screen-details").scrollTop = 0; toast(`Showing ${o.title.toLowerCase()}`, `Arrives ${o.arrives}.`); return; }
-    state.selected = o.id; state.preview = o.id; state.stage = Math.min(state.stage, 1); openOverlay("active");
+    if (state.phase !== "active") { state.preview = o.id; renderJourney(); $("#screen-details").scrollTop = 0; toast(`Showing ${o.title.toLowerCase()}`, `Arrives ${o.arrives}.`); return; }
+    state.selected = o.id; state.preview = o.id; state.stage = Math.min(state.stage, 1); openOverlay("details");
     toast(`Switched to ${o.title.toLowerCase()}`, state.sharing?.live ? `Arrival ${o.arrives}. ${state.sharing.to} has been updated.` : `Arrives ${o.arrives}.`);
   },
   report: () => { const o = focusOption(current()); state.form = { car: o.cars ? null : 0 }; openSheet("report"); },
@@ -1190,7 +1199,7 @@ document.addEventListener("keydown", e => {
   if (screen === "schedule") { state.jview = "schedule"; setTab("journeys"); }
   else if (["today", "journeys", "profile"].includes(screen)) setTab(screen);
   else if (screen === "details" && state.preview) openOverlay("details");
-  else if (screen === "active" && state.preview) { state.selected = state.preview; state.phase = "active"; state.stage = +(q.get("stage") || 0); openOverlay("active"); }
+  else if (screen === "active" && state.preview) { state.selected = state.preview; state.phase = "active"; state.stage = +(q.get("stage") || 0); openOverlay("details"); }
   else renderAll();
   const sheet = q.get("sheet");
   if (sheet === "add") A["add-journey"]();

@@ -668,3 +668,7 @@ body.export .demo-notes { display:none; }
 .results .alert-card p { font-size:12px; }
 .results .confidence-line { margin-top:10px; }
 .rc-arrive strong.range { font-size:16px; margin-top:4px; line-height:1.25; }
+/* unified Journey drawer */
+.summary-card.live { border:2px solid var(--green); background:#f6fbf7; }
+.switch-diff { display:flex; gap:8px; align-items:flex-start; margin:12px 2px 0; color:#41454b; font-size:12.5px; line-height:1.45; }
+.switch-diff svg { width:14px; height:14px; margin-top:1px; color:var(--accent); flex:none; }
