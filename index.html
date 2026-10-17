@@ -11,12 +11,12 @@
   <meta name="description" content="Waywise high-fidelity prototype: personalised commute decisions under crowding and disruption.">
   <link rel="manifest" href="manifest.webmanifest">
   <title>Waywise — High-fidelity prototype</title>
-  <link rel="stylesheet" href="styles.css?v=202610171603">
+  <link rel="stylesheet" href="styles.css?v=202610181000">
 </head>
 <body>
   <div class="demo-shell">
     <aside class="demo-notes" aria-label="Prototype notes">
-      <p class="eyebrow">AID · HIGH-FIDELITY PROTOTYPE · V3</p>
+      <p class="eyebrow">AID · HIGH-FIDELITY PROTOTYPE · V4</p>
       <h1>Waywise</h1>
       <p class="lede">Compare the real consequences of taking, waiting or switching when a familiar commute changes.</p>
       <div class="research-note">
@@ -32,6 +32,17 @@
         <button class="scenario" data-scenario="disruption">2 · Getting to work on time</button>
         <button class="scenario" data-scenario="normal">3 · Disruption on the way home</button>
       </div>
+      <details class="changes">
+        <summary>What changed in v4 (IA cleanup)</summary>
+        <ol>
+          <li>Every bottom sheet closes with an ×; primary actions stay pinned at the bottom.</li>
+          <li>Trip preferences sheet is selection + Done only; management moved to Profile.</li>
+          <li>Profile is an entry list — Saved journeys, Travel preferences, Alerts — each its own page.</li>
+          <li>Importance sliders (1–10) replaced with Low / Medium / High.</li>
+          <li>Route cards slimmed to line, arrival, three badges, one warning and Start.</li>
+          <li>“Why this route?” folded into Route details; close (×) vs collapse (⌄) disambiguated.</li>
+        </ol>
+      </details>
       <details class="changes">
         <summary>What changed from mid-fi</summary>
         <ol>
@@ -81,6 +92,6 @@
       <div class="perm" id="perm"></div>
     </main>
   </div>
-  <script src="app.js?v=202610171603"></script>
+  <script src="app.js?v=202610181000"></script>
 </body>
 </html>

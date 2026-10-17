@@ -702,3 +702,19 @@ body.export .demo-notes { display:none; }
 .rank-row .fchip { min-width:0; }
 .rank-row .fchip .chev { margin-left:2px; font-size:10px; }
 .rc-next { color:var(--muted); }
+
+/* ---------- v4 IA cleanup ---------- */
+.sheet-x { position:absolute; right:14px; top:12px; z-index:3; width:30px; height:30px; display:grid; place-items:center; border:0; border-radius:50%; background:#e3e6ea; color:#41454b; font-size:19px; line-height:1; }
+.bottom-sheet .sheet-actions { position:sticky; bottom:-24px; z-index:2; margin:16px -20px -24px; padding:12px 20px calc(16px + env(safe-area-inset-bottom,0px)); background:#fff; box-shadow:0 -12px 16px -4px #fff; }
+.segmented.three { grid-template-columns:1fr 1fr 1fr; margin-top:9px; }
+.segmented.three button { padding:7px 4px; font-size:12.5px; }
+.app-header.subpage { justify-content:flex-start; }
+.back-btn { flex:none; width:34px; height:34px; display:grid; place-items:center; border:0; border-radius:50%; background:#e8eaee; color:#41454b; }
+.back-btn svg { width:17px; height:17px; }
+.why-details { margin-top:14px; padding:0 14px; border:1px solid var(--line); border-radius:14px; background:#fff; }
+.why-details summary { display:flex; align-items:center; justify-content:space-between; padding:13px 0; font-size:14px; font-weight:700; cursor:pointer; list-style:none; }
+.why-details summary::-webkit-details-marker { display:none; }
+.why-details summary::after { content:"›"; color:var(--faint); font-size:17px; transform:rotate(90deg); transition:transform .2s; }
+.why-details[open] summary::after { transform:rotate(-90deg); }
+.why-details[open] summary { border-bottom:1px solid var(--line-2); margin-bottom:10px; }
+.why-details[open] { padding-bottom:13px; }

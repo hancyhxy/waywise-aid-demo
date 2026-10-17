@@ -150,13 +150,13 @@ function generic(from, to, clock) {
 }
 
 /* ---------- state ---------- */
-const DEFAULTS = { time: 8, seat: 6, crowd: 5, reliability: 9, walk: 5, transfer: 5, wait: 4, modes: { train: true, metro: true, bus: true, ferry: true, lightrail: true } };
+const DEFAULTS = { time: 9, seat: 5, crowd: 5, reliability: 9, walk: 5, transfer: 5, wait: 5, modes: { train: true, metro: true, bus: true, ferry: true, lightrail: true } };
 const state = {
   scenario: "disruption", journeys: clone(SEED_JOURNEYS), leg: "work:out", day: "wed", clock: "17:45",
   prefs: new Set(), showMore: false, selected: null, phase: "options", stage: 0, tab: "today", overlay: null,
   jview: "list", schedDay: "wed", occ: clone(SEED_OCC), noCommute: new Set(),
   defaults: clone(DEFAULTS), savedDefaults: clone(DEFAULTS), alertsOn: true, sharing: null, reports: [],
-  today: null, reminder: null, locPerm: null, learn: true, actionable: true, sheet: null, form: {}
+  today: null, reminder: null, locPerm: null, learn: true, actionable: true, sheet: null, form: {}, pview: "home"
 };
 
 /* ---------- derived ---------- */
@@ -283,17 +283,6 @@ function tradeoff(o, d) {
   if (o.walk >= 12) return `Includes ${o.walk} min of walking.`;
   return "No major trade-off against the other options right now.";
 }
-function compareLine(o, d) {
-  const sameMode = d.options.filter(x => x.mode === o.mode);
-  const firstDep = Math.min(...sameMode.map(x => toMin(x.departs)));
-  const earliestArr = Math.min(...d.options.map(arrEnd));
-  const parts = [];
-  if (toMin(o.departs) > firstDep) parts.push(`Departs ${toMin(o.departs) - firstDep} min later than the next ${o.mode === "metro" ? "Metro" : o.mode}`);
-  if (arrEnd(o) > earliestArr) parts.push(`arrives ${arrEnd(o) - earliestArr} min later than the fastest option`);
-  if (!parts.length) return "";
-  const s = parts.join(" · ");
-  return s[0].toUpperCase() + s.slice(1);
-}
 function scheduledToday(day) {
   if (state.noCommute.has(day)) return [];
   const legs = [];
@@ -363,10 +352,10 @@ function renderToday() {
   const np = state.prefs.size;
 
   const plist = [...state.prefs].map(prefLabel);
-  const topW = Object.entries(W_LABEL).map(([k, l]) => [state.defaults[k], l]).sort((a, b) => b[0] - a[0]).slice(0, 3);
+  const hi = Object.entries(W_LABEL).filter(([k]) => state.defaults[k] >= 8).map(([, l]) => l);
   const prefBar = np
-    ? `<div class="rank-row"><span class="rank-cap">Boosted for this journey</span><button class="fchip on" data-act="prefs">${esc(plist.slice(0, 2).join(", "))}${np > 2 ? ` +${np - 2}` : ""}<b class="chev">▾</b></button></div>`
-    : `<div class="rank-row"><span class="rank-cap">Ranked by</span><button class="fchip" data-act="prefs">${topW.map(([v, l]) => `${l} ${v}`).join(" · ")}<b class="chev">▾</b></button></div>`;
+    ? `<div class="rank-row"><span class="rank-cap">Preferences for this trip</span><button class="fchip on" data-act="prefs">${esc(plist.slice(0, 2).join(", "))}${np > 2 ? ` +${np - 2}` : ""}<b class="chev">▾</b></button></div>`
+    : `<div class="rank-row"><span class="rank-cap">Ranked by</span><button class="fchip" data-act="prefs">${hi.length ? hi.join(" · ") : "Default preferences"}<b class="chev">▾</b></button></div>`;
   el.innerHTML = `${header}
     ${sharing}
     <article class="search-card" aria-label="Journey for today">
@@ -389,7 +378,7 @@ function renderToday() {
         <button class="conf-pill" data-act="certainty" aria-label="How accurate are these arrival times?"><i class="c-${certainty(d.confidence).toLowerCase()}"></i>Arrivals ${CERT_RANGE[certainty(d.confidence)]}</button>
       </div>
       ${prefBar}
-      ${np ? `<p class="pref-note">Boosts apply to this journey only · <button class="btn link sm" data-act="save-default">Save as default</button> · <button class="btn link sm" data-act="reset-prefs">Reset</button></p>` : ""}
+      ${np ? `<p class="pref-note">Applies to this trip only · <button class="btn link sm" data-act="save-default">Save as default</button> · <button class="btn link sm" data-act="reset-prefs">Reset</button></p>` : ""}
       ${d.alert.tone === "green" ? "" : `<div class="alert-card ${d.alert.tone}" role="status">
         <div class="alert-icon">!</div>
         <div><span class="source">${esc(d.alert.source)}</span><strong>${esc(d.alert.title)}</strong><p>${esc(d.alert.copy)}</p><small>Updated ${d.alert.updated} · next update ${d.alert.next}</small></div>
@@ -449,7 +438,7 @@ function filterSaved(initial) {
 function routeCard(o, d, rec) {
   const isRec = o.id === rec.id, live = state.phase === "active" && o.id === state.selected, late = lateBy(o, d), p = state.prefs;
   const f = on => (on ? " focus" : "");
-  const cmp = compareLine(o, d), conf = conflicts(o, d);
+  const conf = conflicts(o, d);
   const strip = live ? `<div class="rec-strip live-strip"><span class="pulse"></span>In progress</div>`
     : isRec ? `<div class="rec-strip">${ICON.sparkle}<span><b>Recommended</b> · ${esc(reason(o, d))}</span></div>` : "";
   return `<article class="route-card${isRec ? " recommended" : ""}${live ? " live" : ""}" data-route="${o.id}" data-act="open-route" data-id="${o.id}" role="button" tabindex="0" aria-label="${esc(o.title)}: view route details">
@@ -463,21 +452,20 @@ function routeCard(o, d, rec) {
         </div>
         <div class="rc-arrive${f(p.has("sooner"))}"><small>Arrives</small><strong class="${o.arrives.length > 5 ? "range" : ""}${late ? " late" : ""}">${o.arrives}</strong>${late ? `<em class="late">${late} min late</em>` : d.target ? `<em class="ontime">On time</em>` : "<em>estimate</em>"}</div>
       </div>
-      <p class="rc-times">Leave by <b>${o.leaveBy}</b> · departs <b>${o.departs}</b> · ${esc(o.platform.split(",").pop().trim())} · ${platformWait(o)} min wait<span class="rc-next"> · next ${nextDep(o, d)}</span></p>
-      ${cmp ? `<p class="compare-line">${cmp}</p>` : ""}
+      <p class="rc-times">Leave by <b>${o.leaveBy}</b> · departs <b>${o.departs}</b> · ${esc(o.platform.split(",").pop().trim())}</p>
       <div class="rc-status">
         <span class="st crowd-${o.crowd}${f(p.has("seat"))}"><i></i>${CROWD[o.crowd]} crowding</span>
         <span class="st ${seatTone(o.seat)}${f(p.has("seat"))}">${SEAT[o.seat]}</span>
-        <span class="st${f(p.has("walk"))}">${o.walk} min walk</span>
-        <span class="st${f(p.has("transfer"))}">${o.transfers ? `${o.transfers} transfer` : "Direct"}</span>
         <span class="st ${relTone(o.reliability)}${f(p.has("reliable"))}">${o.reliability}% on time</span>
+        ${p.has("walk") ? `<span class="st focus">${o.walk} min walk</span>` : ""}
+        ${p.has("transfer") ? `<span class="st focus">${o.transfers ? `${o.transfers} transfer` : "Direct"}</span>` : ""}
       </div>
-      ${conf.map(c => `<p class="conflict">${ICON.warn}<span>${esc(c)}</span></p>`).join("")}
+      ${conf.length ? `<p class="conflict">${ICON.warn}<span>${esc(conf[0])}${conf.length > 1 ? ` · +${conf.length - 1} more in details` : ""}</span></p>` : ""}
       <div class="rc-foot">
-        <button class="why-link" data-act="why" data-id="${o.id}">Why this route? ›</button>
+        <span class="why-link">Details ›</span>
         ${live ? `<button class="btn primary sm" data-act="open-active">View journey</button>`
-      : state.phase === "active" ? `<button class="btn ghost sm" data-act="open-route" data-id="${o.id}">View details</button>`
-        : `<button class="btn ghost sm" data-act="open-route" data-id="${o.id}">Details</button><button class="btn primary sm" data-act="start-route" data-id="${o.id}">Start</button>`}
+      : state.phase === "active" ? ""
+        : `<button class="btn primary sm" data-act="start-route" data-id="${o.id}">Start</button>`}
       </div>
     </div>
   </article>`;
@@ -549,7 +537,6 @@ function renderSchedule() {
           <div class="occ-actions">
             ${l.skip ? `<button class="btn link sm" data-act="unskip" data-key="${l.key}">Restore</button>`
         : `<button class="btn link sm" data-act="edit-occ" data-key="${l.key}">Change for this date</button><button class="btn link sm" data-act="skip" data-key="${l.key}">Skip this date</button>`}
-            <button class="btn link sm muted" data-act="edit-sched" data-id="${l.j.id}">Edit recurring schedule</button>
           </div></div>
       </div>`).join("") + `<button class="btn ghost sm nocommute" data-act="toggle-nocommute">No commute on this date</button>`;
   }
@@ -569,39 +556,45 @@ const SLIDERS = [
 ];
 const MODES = [["train", "Train"], ["metro", "Metro"], ["bus", "Bus"], ["ferry", "Ferry"], ["lightrail", "Light rail"]];
 const dirty = () => JSON.stringify(state.defaults) !== JSON.stringify(state.savedDefaults);
-function slider(x) {
-  return `<div class="prow"><div class="prow-top"><label for="s-${x.k}"><strong>${x.t}</strong><small>${x.s}</small></label><output>${state.defaults[x.k]}</output></div>
-    <input id="s-${x.k}" type="range" min="1" max="10" value="${state.defaults[x.k]}" data-slider="${x.k}"></div>`;
+const LEVELS = [[2, "Low"], [5, "Medium"], [9, "High"]];
+const levelOf = v => (v >= 8 ? "High" : v >= 4 ? "Medium" : "Low");
+function prefLevelRow(x) {
+  const v = state.defaults[x.k];
+  return `<div class="prow"><div class="prow-top"><label><strong>${x.t}</strong><small>${x.s}</small></label></div>
+    <div class="segmented three">${LEVELS.map(([val, l]) => `<button class="${levelOf(v) === l ? "active" : ""}" data-act="set-level" data-k="${x.k}" data-v="${val}" aria-pressed="${levelOf(v) === l}">${l}</button>`).join("")}</div></div>`;
+}
+const profileSub = (title, body) => `
+  <header class="app-header subpage">
+    <button class="back-btn" data-act="pview" data-view="home" aria-label="Back to Profile">${ICON.back}</button>
+    <div><p class="overline">PROFILE</p><h2>${title}</h2></div>
+  </header>${body}`;
+function profilePrefs() {
+  return profileSub("Travel preferences", `
+    <p class="hint">How much each factor matters when routes are ranked. Saved automatically; quick picks on Today affect that trip only.</p>
+    <article class="pref-group">${[...SLIDERS, { k: "wait", t: "Less waiting", s: "Shorter waits on the platform or at the stop" }].map(prefLevelRow).join("")}</article>
+    <div class="pref-card"><strong>Transport modes</strong><small>Turn off modes you'd rather not use. We'll explain if no route avoids them.</small>
+      <div class="mode-chips">${MODES.map(([k, l]) => `<button class="chip${state.defaults.modes[k] ? " active" : ""}" data-act="mode" data-mode="${k}" role="checkbox" aria-checked="${state.defaults.modes[k]}"><i>${state.defaults.modes[k] ? ICON.check : ""}</i>${l}</button>`).join("")}</div>
+    </div>
+    <button class="btn link sm" data-act="method">How recommendations work ›</button>
+    <button class="btn link sm" data-act="reset-defaults">Reset to defaults</button>`);
+}
+function profileAlerts() {
+  return profileSub("Alerts &amp; notifications", `
+    <div class="toggle-card"><span><span><strong>Actionable alerts only</strong><small>Notify me only when switching or waiting may help</small></span></span><button class="toggle${state.actionable ? " active" : ""}" data-act="toggle" data-key="actionable" aria-pressed="${state.actionable}"><i></i></button></div>
+    <div class="toggle-card"><span><span><strong>Learn from my choices</strong><small>Suggest changes to my defaults; never change them without asking</small></span></span><button class="toggle${state.learn ? " active" : ""}" data-act="toggle" data-key="learn" aria-pressed="${state.learn}"><i></i></button></div>`);
 }
 function renderProfile() {
-  $("#screen-profile").innerHTML = `
+  const el = $("#screen-profile");
+  if (state.pview === "prefs") { el.innerHTML = profilePrefs(); return; }
+  if (state.pview === "alerts") { el.innerHTML = profileAlerts(); return; }
+  el.innerHTML = `
     <header class="app-header"><div><p class="overline">PROFILE &amp; ACCOUNT</p><h2>Alex</h2></div><span class="avatar big">AL</span></header>
     <article class="account-card">
-      <div class="acc-row">${ICON.cloud}<div><strong>Saved to your account</strong><small>alex.commuter@email.com · journeys and preferences sync across your devices</small></div></div>
+      <div class="acc-row">${ICON.cloud}<div><strong>Saved to your account</strong><small>alex.commuter@email.com · syncs across your devices</small></div></div>
       <button class="row-link" data-act="tab" data-tab="journeys"><span>Saved journeys</span><b>${state.journeys.length}</b><i>›</i></button>
+      <button class="row-link" data-act="pview" data-view="prefs"><span>Travel preferences</span><b>${Object.entries(W_LABEL).filter(([k]) => state.defaults[k] >= 8).map(([, l]) => l).join(", ") || "Balanced"}</b><i>›</i></button>
+      <button class="row-link" data-act="pview" data-view="alerts"><span>Alerts &amp; notifications</span><b>${state.actionable ? "Actionable only" : "All"}</b><i>›</i></button>
     </article>
-
-    <section class="block" id="defaults">
-      <p class="overline">PERSONALISATION</p><h3>Default travel preferences</h3>
-      <p class="hint">1 = less important · 10 = more important. Changes save automatically and apply to new journeys; quick choices on Today affect only that journey.</p>
-      <article class="pref-group">
-        ${SLIDERS.map(slider).join("")}
-      </article>
-      <details class="more-defaults"${state.form.moreDefaults ? " open" : ""}>
-        <summary>More preferences</summary>
-        <article class="pref-group">${slider({ k: "wait", t: "Less waiting", s: "Shorter waits on the platform or at the stop" })}</article>
-        <div class="pref-card"><strong>Transport modes</strong><small>Turn off modes you'd rather not use. We'll explain if no route avoids them.</small>
-          <div class="mode-chips">${MODES.map(([k, l]) => `<button class="chip${state.defaults.modes[k] ? " active" : ""}" data-act="mode" data-mode="${k}" role="checkbox" aria-checked="${state.defaults.modes[k]}"><i>${state.defaults.modes[k] ? ICON.check : ""}</i>${l}</button>`).join("")}</div>
-        </div>
-      </details>
-      <button class="btn link sm" data-act="reset-defaults">Reset to defaults</button>
-    </section>
-
-    <section class="block">
-      <p class="overline">NOTIFICATIONS</p><h3>Alerts</h3>
-      <div class="toggle-card"><span><span><strong>Actionable alerts only</strong><small>Notify me only when switching or waiting may help</small></span></span><button class="toggle${state.actionable ? " active" : ""}" data-act="toggle" data-key="actionable" aria-pressed="${state.actionable}"><i></i></button></div>
-      <div class="toggle-card"><span><span><strong>Learn from my choices</strong><small>Suggest changes to my defaults; never change them without asking</small></span></span><button class="toggle${state.learn ? " active" : ""}" data-act="toggle" data-key="learn" aria-pressed="${state.learn}"><i></i></button></div>
-    </section>
     <section class="block demo-only">
       <p class="overline">PROTOTYPE</p>
       <button class="btn ghost full" data-act="scenarios">Switch demo scenario</button>
@@ -631,6 +624,19 @@ function legsTimeline(o, d) {
     { icon: ICON.walk, t: `Walk ${Math.max(0, o.walk - o.walkTo)} min to ${d.to}`, s: `Arrive ${o.arrives} (estimate)` }
   ];
   return `<ol class="timeline">${steps.map(s => `<li><span class="tl-icon">${s.icon}</span><div><strong>${esc(s.t)}</strong><small>${esc(s.s)}</small></div></li>`).join("")}</ol>`;
+}
+/* "Why this route?" lives inside Route details (was a separate sheet). */
+function whyDetails(o, d) {
+  const conf = conflicts(o, d), c = certainty(d.confidence), p = [...state.prefs];
+  return `<details class="why-details"><summary>Why this route?</summary>
+    <p class="sheet-lede">${p.length ? `Ranked with your picks for this trip (<b>${p.map(prefLabel).join(", ")}</b>). ` : ""}${esc(reason(o, d))}</p>
+    ${conf.map(x => `<p class="conflict">${ICON.warn}<span>${esc(x)}</span></p>`).join("")}
+    <div class="why-block"><strong>The trade-off</strong><p>${esc(tradeoff(o, d))}</p></div>
+    <div class="why-block"><strong>How reliable is this estimate?</strong>
+      <p><i class="dot c-${c.toLowerCase()}"></i><b>${c}.</b> ${CERTAINTY_COPY[c]} ${esc(d.why)}</p>
+      <small>${esc(d.alert.source)} · updated ${d.alert.updated}. Estimates, not guarantees.</small></div>
+    <button class="btn link sm" data-act="method">How recommendations work ›</button>
+  </details>`;
 }
 const STAGES = ["Walk to platform", "Board", "On board", "Arrived"];
 /* Journey drawer: one surface with phases — preview (decide), active (execute), arrived.
@@ -670,7 +676,7 @@ function renderJourney() {
     : started ? `<button class="btn primary full" data-act="switch-ask" data-id="${o.id}">Switch to this route</button>`
       : `<button class="btn primary full" data-act="start">Start journey</button>`;
   el.innerHTML = `
-    <div class="drawer-top"><button class="grab" data-act="close-drawer" aria-label="Collapse"></button><button class="drawer-x" data-act="close-drawer" aria-label="Close">×</button></div>
+    <div class="drawer-top"><button class="grab" data-act="close-drawer" aria-label="${live ? "Collapse" : "Close"}"></button><button class="drawer-x" data-act="close-drawer" aria-label="${live ? "Collapse to mini bar" : "Close"}">${live ? "⌄" : "×"}</button></div>
     <p class="overline">${live ? "YOUR JOURNEY" : "ROUTE DETAILS"}</p>
     <h2 class="title">${esc(o.title)}</h2>
     <p class="muted">${esc(d.from)} → ${esc(d.to)}</p>
@@ -685,7 +691,7 @@ function renderJourney() {
       <p class="conf-row"><i class="c-${certainty(d.confidence).toLowerCase()}"></i>Arrival estimate confidence: <b>${certainty(d.confidence)}</b> · updated ${d.alert.updated}</p>
     </article>
     ${switchDiff}
-    ${live ? liveBody : legsTimeline(o, d)}
+    ${live ? liveBody : legsTimeline(o, d) + whyDetails(o, d)}
     ${!arrived ? `<section class="block"><p class="overline">CROWDING BY CARRIAGE</p><h3>Where to board</h3>${carriageDiagram(o, d)}</section>` : ""}
     ${live ? "" : `<div class="toggle-card"><span>${ICON.bell}<span><strong>Alerts for this journey</strong><small>${state.alertsOn ? "On: we'll tell you if this service is delayed or gets too crowded." : "Off: you won't be notified about changes to this journey."}</small></span></span><button class="toggle${state.alertsOn ? " active" : ""}" data-act="toggle" data-key="alertsOn" aria-pressed="${state.alertsOn}"><i></i></button></div>`}
     <div class="action-list">
@@ -712,7 +718,7 @@ function reminderCard(o, d) {
 function openSheet(kind, arg) {
   state.sheet = { kind, arg };
   const sh = $("#sheet");
-  sh.innerHTML = `<button class="sheet-handle" data-act="close-sheet" aria-label="Close"></button>${SHEETS[kind](arg)}`;
+  sh.innerHTML = `<button class="sheet-handle" data-act="close-sheet" aria-label="Close"></button><button class="sheet-x" data-act="close-sheet" aria-label="Close">×</button>${SHEETS[kind](arg)}`;
   sh.scrollTop = 0;
   $("#backdrop").classList.add("open"); sh.classList.add("open");
 }
@@ -720,52 +726,16 @@ function closeSheet() { state.sheet = null; $("#backdrop").classList.remove("ope
 function refreshSheet() { if (state.sheet) openSheet(state.sheet.kind, state.sheet.arg); }
 
 const SHEETS = {
-  why(id) {
-    const d = current(), o = d.options.find(x => x.id === id), late = lateBy(o, d), p = [...state.prefs];
-    const before = d.target ? toMin(d.target) - arrEnd(o) : null;
-    const lines = p.map(k => {
-      switch (k) {
-        case "sooner": return [!late && arrEnd(o) - Math.min(...d.options.map(arrEnd)) < 3, late ? `Arrives ${o.arrives}, ${late} min after your ${d.target} ${d.targetLabel}.` : `Estimated to arrive at ${o.arrives}${before !== null ? `, ${before} min before your ${d.target} ${d.targetLabel}` : ""}.`];
-        case "seat": return [o.seat >= 3, `${SEAT[o.seat]}; crowding ${CROWD[o.crowd].toLowerCase()}.`];
-        case "walk": return [o.walk < 12, `${o.walk} min walking in total.`];
-        case "transfer": return [!o.transfers, o.transfers ? `${o.transfers} transfer.` : "Direct, no transfers."];
-        case "reliable": return [o.reliability >= 80, `${o.reliability}% of similar trips arrive on time.`];
-        case "wait": return [platformWait(o) <= 5, `About ${platformWait(o)} min wait on the platform.`];
-        case "nobus": return [o.mode !== "bus", o.mode === "bus" ? "Uses a bus." : "No buses."];
-        case "nometro": return [o.mode !== "metro", o.mode === "metro" ? "Uses the Metro." : "No Metro."];
-        default: return [true, ""];
-      }
-    });
-    const intro = p.length ? `You selected <b>${p.map(prefLabel).join(", ")}</b>.` : "You haven't chosen anything for this journey, so we used your default travel preferences.";
-    const isRec = ranked(d)[0].id === id, c = certainty(d.confidence);
-    return `<p class="overline">${isRec ? "RECOMMENDED · " : ""}WHY THIS ROUTE?</p><h3>${esc(o.title)}</h3>
-      <p class="sheet-lede">${intro} ${esc(reason(o, d))}</p>
-      ${lines.length ? `<ul class="match-list">${lines.map(([ok, t], i) => `<li class="${ok ? "ok" : "no"}">${ok ? ICON.check : ICON.warn}<span><b>${prefLabel(p[i])}:</b> ${esc(t)}</span></li>`).join("")}</ul>` : ""}
-      <div class="why-block"><strong>The trade-off</strong><p>${esc(tradeoff(o, d))}</p></div>
-      <div class="why-block"><strong>Your choices for this journey</strong>
-        <p>${p.length ? p.map(k => `<span class="mini-chip">${prefLabel(k)}</span>`).join(" ") : "None selected — using your defaults from Profile."}</p>
-        <small>Today's choices don't change your saved defaults unless you tap Save as default.</small></div>
-      <div class="why-block"><strong>How reliable is this estimate?</strong>
-        <p><i class="dot c-${c.toLowerCase()}"></i><b>${c}.</b> ${CERTAINTY_COPY[c]} ${esc(d.why)}</p>
-        <small>${esc(d.alert.source)} · updated ${d.alert.updated}. Seat chances are predictions, not guarantees.</small></div>
-      <div class="sheet-actions">
-        <button class="btn primary full" data-act="open-route" data-id="${o.id}">View details</button>
-        <button class="btn ghost full" data-act="close-sheet">Done</button>
-      </div>`;
-  },
   prefs() {
     const row = p => { const on = state.prefs.has(p.id); return `<button class="pref-row${on ? " on" : ""}" data-act="pref" data-pref="${p.id}" role="checkbox" aria-checked="${on}"><i>${on ? ICON.check : ""}</i><span>${p.label}</span></button>`; };
     const n = state.prefs.size;
-    return `<p class="overline">WHAT MATTERS ON THIS JOURNEY?</p><h3>Boost for this journey</h3>
-      <p class="hint">Routes are ranked by your default priorities from Profile. Boosts raise a priority for this journey only.</p>
+    return `<p class="overline">PREFERENCES · THIS TRIP ONLY</p><h3>What matters on this trip?</h3>
+      <p class="hint">Your picks re-rank today's routes only. Defaults live in Profile → Travel preferences.</p>
       <div class="pref-list">${PREFS.map(row).join("")}</div>
-      <p class="overline sl-h">MORE PREFERENCES</p>
+      <p class="overline sl-h">MORE</p>
       <div class="pref-list">${MORE_PREFS.map(row).join("")}</div>
-      <button class="btn link sm" data-act="goto-defaults">Edit default priorities in Profile ›</button>
-      <button class="btn link sm" data-act="method">How recommendations work ›</button>
       <div class="sheet-actions">
-        <button class="btn primary full" data-act="close-sheet">${n ? `Show options · ${n} selected` : "Show options"}</button>
-        <div class="split"><button class="btn link sm" data-act="reset-prefs" ${n ? "" : "disabled"}>Reset</button><button class="btn link sm" data-act="save-default" ${n ? "" : "disabled"}>Save as default</button></div>
+        <button class="btn primary full" data-act="close-sheet">Done${n ? ` · ${n} selected` : ""}</button>
       </div>`;
   },
   switchConfirm(id) {
@@ -784,8 +754,8 @@ const SHEETS = {
   method() {
     return `<p class="overline">HOW RECOMMENDATIONS WORK</p><h3>Useful detail, not a black box</h3>
       <div class="method-item"><span>1</span><div><strong>Current conditions</strong><p>Delays, frequency, crowding and when the data was last updated. Operator updates are labelled separately from Waywise predictions.</p></div></div>
-      <div class="method-item"><span>2</span><div><strong>Your choices for this journey</strong><p>Quick choices on Today override your defaults for this journey only.</p></div></div>
-      <div class="method-item"><span>3</span><div><strong>Your default travel preferences</strong><p>Set in Profile. They apply to every new journey.</p></div></div>
+      <div class="method-item"><span>2</span><div><strong>Your preferences for this trip</strong><p>Quick picks on Today re-rank that trip only.</p></div></div>
+      <div class="method-item"><span>3</span><div><strong>Your default preferences</strong><p>Set in Profile → Travel preferences. They apply to every new trip.</p></div></div>
       <div class="method-item"><span>4</span><div><strong>Arrival estimate confidence</strong><p>How closely arrival times and crowding are likely to match what's shown.</p></div></div>
       <button class="btn ghost full" data-act="close-sheet">Done</button>`;
   },
@@ -976,7 +946,7 @@ function setScenario(id) {
   id = SCN_ALIAS[id] || id;
   if (id !== "newuser" && !S[id]) return;
   state.scenario = id; resetJourneyState();
-  state.occ = clone(SEED_OCC); state.noCommute = new Set(); state.form = {};
+  state.occ = clone(SEED_OCC); state.noCommute = new Set(); state.form = {}; state.pview = "home";
   if (id === "newuser") { state.journeys = []; state.leg = null; state.day = "tue"; state.clock = "08:40"; state.schedDay = "tue"; }
   else { const s = S[id]; state.journeys = clone(SEED_JOURNEYS); state.day = s.day; state.leg = scheduledToday(s.day).some(l => l.key === s.leg && !l.skip) ? s.leg : null; state.suggested = state.leg; state.clock = s.clock; state.schedDay = s.day; }
   $$(".demo-notes .scenario").forEach(b => b.classList.toggle("active", b.dataset.scenario === id));
@@ -997,12 +967,13 @@ const A = {
     const map = { sooner: ["time", 10], seat: ["seat", 9], walk: ["walk", 9], transfer: ["transfer", 9], reliable: ["reliability", 10], wait: ["wait", 8] };
     state.prefs.forEach(k => { if (map[k]) state.defaults[map[k][0]] = Math.max(state.defaults[map[k][0]], map[k][1]); if (k === "nobus") state.defaults.modes.bus = false; if (k === "nometro") state.defaults.modes.metro = false; });
     state.savedDefaults = clone(state.defaults);
-    toast("Saved as default", "Applies to new journeys. Manage in Profile.", { act: "tab", attrs: 'data-tab="profile"', label: "View" });
+    toast("Saved as default", "Applies to new journeys. Manage in Profile.", { act: "goto-defaults", label: "View" });
     renderAll();
   },
   method: () => openSheet("method"),
   certainty: () => openSheet("certainty"),
-  why: b => openSheet("why", b.dataset.id),
+  pview: b => { state.pview = b.dataset.view; renderProfile(); $("#screen-profile").scrollTop = 0; },
+  "set-level": b => { state.defaults[b.dataset.k] = +b.dataset.v; state.savedDefaults = clone(state.defaults); renderProfile(); renderToday(); },
   "start-route": b => { state.preview = b.dataset.id; A.start(); },
   "open-route": b => { state.preview = b.dataset.id; closeSheet(); openOverlay("details"); },
   "back-routes": () => { state.overlay = null; show(); },
@@ -1014,7 +985,7 @@ const A = {
   },
   "end-ask": () => openSheet("endConfirm"),
   "switch-ask": b => openSheet("switchConfirm", b.dataset.id),
-  "goto-defaults": () => { closeSheet(); setTab("profile"); },
+  "goto-defaults": () => { closeSheet(); state.pview = "prefs"; setTab("profile"); },
   reminder: () => {
     if (state.reminder) { state.reminder = null; renderJourney(); return; }
     if (state.locPerm === "allowed") { state.reminder = "location"; renderJourney(); toast("Arrival reminder on", "Using your location."); return; }
@@ -1090,7 +1061,7 @@ const A = {
   skip: b => { const k = `${state.schedDay}|${b.dataset.key}`; state.occ[k] = { ...(state.occ[k] || {}), skip: true }; syncSuggestion(); renderAll(); toast("Skipped for this date", `${fullDate(state.schedDay)} only. Your schedule is unchanged.`); },
   unskip: b => { const k = `${state.schedDay}|${b.dataset.key}`; if (state.occ[k]) delete state.occ[k].skip; renderJourneys(); },
   "toggle-nocommute": () => { const d = state.schedDay; state.noCommute.has(d) ? state.noCommute.delete(d) : state.noCommute.add(d); syncSuggestion(); renderAll(); },
-  "mode": b => { const k = b.dataset.mode; state.defaults.modes[k] = !state.defaults.modes[k]; state.savedDefaults = clone(state.defaults); state.form.moreDefaults = true; renderProfile(); toast("Preferences saved", "Applies to new journeys."); },
+  "mode": b => { const k = b.dataset.mode; state.defaults.modes[k] = !state.defaults.modes[k]; state.savedDefaults = clone(state.defaults); renderProfile(); renderToday(); },
   "save-defaults": () => { state.savedDefaults = clone(state.defaults); renderAll(); toast("Preferences saved", "Saved to your account. Applies to new journeys."); },
   "reset-defaults": () => { state.defaults = clone(DEFAULTS); state.savedDefaults = clone(DEFAULTS); renderAll(); toast("Reset to defaults", "Applies to new journeys."); },
   "quick-save": () => {
@@ -1173,8 +1144,6 @@ document.addEventListener("click", e => {
 document.addEventListener("input", e => {
   const si = e.target.closest("[data-s]");
   if (si && state.search) { state.search[si.dataset.s] = si.value; filterSaved(); return; }
-  const s = e.target.closest("[data-slider]");
-  if (s) { state.defaults[s.dataset.slider] = +s.value; s.closest(".prow").querySelector("output").value = s.value; state.savedDefaults = clone(state.defaults); clearTimeout(window.__psave); window.__psave = setTimeout(() => toast("Preferences saved", "Applies to new journeys."), 700); renderToday(); return; }
   const f = e.target.closest("[data-f]");
   if (f) {
     const k = f.dataset.f;
@@ -1184,7 +1153,6 @@ document.addEventListener("input", e => {
     if (k === "from" || k === "to") { const n = $("#auto-name"); if (n) n.textContent = state.form.from && state.form.to ? `${state.form.from} → ${state.form.to}` : "From → To"; }
   }
 });
-document.addEventListener("toggle", e => { if (e.target.classList?.contains("more-defaults")) state.form.moreDefaults = e.target.open; }, true);
 document.addEventListener("keydown", e => {
   if (e.key === "Escape") { closeSheet(); closeSearch(); }
   if ((e.key === "Enter" || e.key === " ") && e.target.matches?.('.route-card[data-act]')) { e.preventDefault(); A["open-route"](e.target); }
@@ -1207,7 +1175,7 @@ document.addEventListener("keydown", e => {
   else renderAll();
   const sheet = q.get("sheet");
   if (sheet === "add") A["add-journey"]();
-  else if (sheet === "why") openSheet("why", state.preview || ranked(current())[0].id);
+  else if (sheet === "why") { state.preview = state.preview || ranked(current())[0].id; openOverlay("details"); }
   else if (sheet && state.preview && ["compare", "report", "share"].includes(sheet)) A[sheet]({ dataset: {} });
   else if (sheet === "edit-today") A["edit-today"]();
   if (q.get("export") === "1") document.body.classList.add("export");
