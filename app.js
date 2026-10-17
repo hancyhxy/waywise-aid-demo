@@ -7,6 +7,7 @@ const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const clone = o => JSON.parse(JSON.stringify(o));
+const lcT = t => String(t).toLowerCase().replace(/\bmetro\b/g, "Metro");
 const toMin = t => { const [h, m] = String(t).split("–")[0].split(":").map(Number); return h * 60 + m; };
 const fmt = m => { m = ((m % 1440) + 1440) % 1440; return `${Math.floor(m / 60)}:${String(m % 60).padStart(2, "0")}`; };
 const pad = t => (t && t.length === 4 ? "0" + t : t || "");
@@ -99,9 +100,9 @@ const S = {
     alert: { tone: "amber", source: "Waywise prediction", title: "Peak-hour crowding at Central", copy: "North Shore trains are expected to be very full until about 18:00.", updated: "1 min ago", next: "17:35" },
     confidence: 74, why: "Peak-hour loads are predictable, but a held train can change crowding quickly.",
     options: [
-      { id: "take", kind: "take", title: "Take the next train", service: "T1 North Shore Line to Hornsby", mode: "train", platform: "Platform 16", leaveBy: "17:30", walkTo: 6, departs: "17:38", arrives: "18:00", walk: 8, transfers: 0, crowd: 3, seat: 0, reliability: 84, ride: 22, cars: [3, 3, 3, 3, 3, 3, 2, 2], towards: "Hornsby" },
-      { id: "wait", kind: "wait", title: "Wait for a later train", service: "T1 North Shore Line to Hornsby", mode: "train", platform: "Platform 16", leaveBy: "17:40", walkTo: 6, departs: "17:48", arrives: "18:10", walk: 8, transfers: 0, crowd: 2, seat: 4, reliability: 86, ride: 22, cars: [2, 2, 1, 1, 1, 1, 1, 2], towards: "Hornsby" },
-      { id: "switch", kind: "switch", title: "Switch to Metro", service: "Metro M1 to Crows Nest · 12 min walk home", mode: "metro", platform: "Central Metro, Platform 1", leaveBy: "17:31", walkTo: 5, departs: "17:38", arrives: "18:12", walk: 17, transfers: 0, crowd: 2, seat: 2, reliability: 90, ride: 22, cars: [2, 2, 1, 1, 2, 2], towards: "Tallawong" }
+      { id: "take", kind: "take", title: "Next train", service: "T1 North Shore Line to Hornsby", mode: "train", platform: "Platform 16", leaveBy: "17:30", walkTo: 6, departs: "17:38", arrives: "18:00", walk: 8, transfers: 0, crowd: 3, seat: 0, reliability: 84, ride: 22, cars: [3, 3, 3, 3, 3, 3, 2, 2], towards: "Hornsby" },
+      { id: "wait", kind: "wait", title: "Later train", service: "T1 North Shore Line to Hornsby", mode: "train", platform: "Platform 16", leaveBy: "17:40", walkTo: 6, departs: "17:48", arrives: "18:10", walk: 8, transfers: 0, crowd: 2, seat: 4, reliability: 86, ride: 22, cars: [2, 2, 1, 1, 1, 1, 1, 2], towards: "Hornsby" },
+      { id: "switch", kind: "switch", title: "Metro instead", service: "Metro M1 to Crows Nest · 12 min walk home", mode: "metro", platform: "Central Metro, Platform 1", leaveBy: "17:31", walkTo: 5, departs: "17:38", arrives: "18:12", walk: 17, transfers: 0, crowd: 2, seat: 2, reliability: 90, ride: 22, cars: [2, 2, 1, 1, 2, 2], towards: "Tallawong" }
     ]
   },
   disruption: {
@@ -110,9 +111,9 @@ const S = {
     alert: { tone: "red", source: "Operator update · Sydney Trains", title: "North Shore Line disruption", copy: "Reduced service is making platforms more crowded. Recovery time unknown.", updated: "2 min ago", next: "18:00" },
     confidence: 76, why: "Reduced frequency makes departures and crowding less certain than usual.",
     options: [
-      { id: "take", kind: "take", title: "Take the next train", service: "T1 North Shore Line to Hornsby", mode: "train", platform: "Platform 16", leaveBy: "17:45", walkTo: 5, departs: "17:52", arrives: "18:22", walk: 7, transfers: 0, crowd: 3, seat: 0, reliability: 80, ride: 28, cars: [3, 3, 3, 3, 3, 3, 3, 2], towards: "Hornsby" },
-      { id: "wait", kind: "wait", title: "Wait for one train", service: "T1 North Shore Line to Hornsby", mode: "train", platform: "Platform 16", leaveBy: "17:54", walkTo: 5, departs: "18:01", arrives: "18:31", walk: 7, transfers: 0, crowd: 2, seat: 3, reliability: 78, ride: 28, cars: [3, 2, 2, 2, 1, 1, 1, 2], towards: "Hornsby" },
-      { id: "switch", kind: "switch", title: "Switch to Metro", service: "Metro M1, then bus 200 from Crows Nest", mode: "metro", platform: "Central Metro, Platform 1", leaveBy: "17:47", walkTo: 9, departs: "17:58", arrives: "18:24–18:34", walk: 14, transfers: 1, crowd: 2, seat: 2, reliability: 66, ride: 24, cars: [2, 2, 2, 1, 1, 2], towards: "Tallawong" }
+      { id: "take", kind: "take", title: "Next train", service: "T1 North Shore Line to Hornsby", mode: "train", platform: "Platform 16", leaveBy: "17:45", walkTo: 5, departs: "17:52", arrives: "18:22", walk: 7, transfers: 0, crowd: 3, seat: 0, reliability: 80, ride: 28, cars: [3, 3, 3, 3, 3, 3, 3, 2], towards: "Hornsby" },
+      { id: "wait", kind: "wait", title: "Later train", service: "T1 North Shore Line to Hornsby", mode: "train", platform: "Platform 16", leaveBy: "17:54", walkTo: 5, departs: "18:01", arrives: "18:31", walk: 7, transfers: 0, crowd: 2, seat: 3, reliability: 78, ride: 28, cars: [3, 2, 2, 2, 1, 1, 1, 2], towards: "Hornsby" },
+      { id: "switch", kind: "switch", title: "Metro + bus", service: "Metro M1, then bus 200 from Crows Nest", mode: "metro", platform: "Central Metro, Platform 1", leaveBy: "17:47", walkTo: 9, departs: "17:58", arrives: "18:24–18:34", walk: 14, transfers: 1, crowd: 2, seat: 2, reliability: 66, ride: 24, cars: [2, 2, 2, 1, 1, 2], towards: "Tallawong" }
     ]
   },
   normal: {
@@ -121,9 +122,9 @@ const S = {
     alert: { tone: "red", source: "Operator update · Sydney Trains", title: "Delays on your usual line", copy: "Trains delayed after an incident at Artarmon. Expected delay 20+ min; recovery time unknown.", updated: "1 min ago", next: "19:30" },
     confidence: 62, why: "The incident is still being managed, so delay estimates may change at the next update.",
     options: [
-      { id: "take", kind: "wait", title: "Wait for the delayed train", service: "T1 North Shore Line to City", mode: "train", platform: "Platform 1", leaveBy: "19:20", walkTo: 4, departs: "19:45", arrives: "20:05–20:25", walk: 4, transfers: 0, crowd: 3, seat: 1, reliability: 45, ride: 8, cars: [3, 3, 3, 3, 3, 3, 3, 3], towards: "City" },
-      { id: "wait", kind: "bus", title: "Take the bus instead", service: "Route 115 to Wollstonecraft", mode: "bus", platform: "Stand C, Victoria Ave", leaveBy: "19:22", walkTo: 4, departs: "19:28", arrives: "19:58", walk: 6, transfers: 0, crowd: 2, seat: 3, reliability: 82, ride: 28, cars: null, towards: "Wollstonecraft" },
-      { id: "switch", kind: "switch", title: "Switch to Metro + walk", service: "Metro M1 to Crows Nest · 12 min walk home", mode: "metro", platform: "Chatswood Metro, Platform 2", leaveBy: "19:23", walkTo: 4, departs: "19:29", arrives: "19:53", walk: 16, transfers: 0, crowd: 2, seat: 2, reliability: 88, ride: 6, cars: [2, 1, 1, 1, 2, 2], towards: "Sydenham" }
+      { id: "take", kind: "wait", title: "Delayed train", service: "T1 North Shore Line to City", mode: "train", platform: "Platform 1", leaveBy: "19:20", walkTo: 4, departs: "19:45", arrives: "20:05–20:25", walk: 4, transfers: 0, crowd: 3, seat: 1, reliability: 45, ride: 8, cars: [3, 3, 3, 3, 3, 3, 3, 3], towards: "City" },
+      { id: "wait", kind: "bus", title: "Bus instead", service: "Route 115 to Wollstonecraft", mode: "bus", platform: "Stand C, Victoria Ave", leaveBy: "19:22", walkTo: 4, departs: "19:28", arrives: "19:58", walk: 6, transfers: 0, crowd: 2, seat: 3, reliability: 82, ride: 28, cars: null, towards: "Wollstonecraft" },
+      { id: "switch", kind: "switch", title: "Metro + walk", service: "Metro M1 to Crows Nest · 12 min walk home", mode: "metro", platform: "Chatswood Metro, Platform 2", leaveBy: "19:23", walkTo: 4, departs: "19:29", arrives: "19:53", walk: 16, transfers: 0, crowd: 2, seat: 2, reliability: 88, ride: 6, cars: [2, 1, 1, 1, 2, 2], towards: "Sydenham" }
     ]
   }
 };
@@ -142,9 +143,9 @@ function generic(from, to, clock) {
     alert: { tone: "green", source: "Operator update", title: "Services running normally", copy: `No reported disruption between ${from} and ${to}.`, updated: "just now", next: fmt(c + 10) },
     confidence: 88, why: "Services are running to timetable and recent data is complete.",
     options: [
-      { id: "take", kind: "take", title: "Take the next train", service: "Sydney Trains · direct", mode: "train", platform: "Platform 2", leaveBy: fmt(c), walkTo: 5, departs: fmt(c + 7), arrives: fmt(c + 33), walk: 9, transfers: 0, crowd: 2, seat: 2, reliability: 88, ride: 22, cars: [2, 2, 1, 1, 2, 2, 1, 1], towards: to },
-      { id: "wait", kind: "wait", title: "Wait for a quieter train", service: "Sydney Trains · direct", mode: "train", platform: "Platform 2", leaveBy: fmt(c + 8), walkTo: 5, departs: fmt(c + 15), arrives: fmt(c + 41), walk: 9, transfers: 0, crowd: 1, seat: 4, reliability: 90, ride: 22, cars: [1, 1, 1, 1, 1, 2, 1, 1], towards: to },
-      { id: "switch", kind: "bus", title: "Take the bus", service: "Local bus · direct", mode: "bus", platform: "Nearest stop", leaveBy: fmt(c + 3), walkTo: 3, departs: fmt(c + 10), arrives: fmt(c + 44), walk: 6, transfers: 0, crowd: 1, seat: 3, reliability: 76, ride: 31, cars: null, towards: to }
+      { id: "take", kind: "take", title: "Next train", service: "Sydney Trains · direct", mode: "train", platform: "Platform 2", leaveBy: fmt(c), walkTo: 5, departs: fmt(c + 7), arrives: fmt(c + 33), walk: 9, transfers: 0, crowd: 2, seat: 2, reliability: 88, ride: 22, cars: [2, 2, 1, 1, 2, 2, 1, 1], towards: to },
+      { id: "wait", kind: "wait", title: "Later train", service: "Sydney Trains · direct", mode: "train", platform: "Platform 2", leaveBy: fmt(c + 8), walkTo: 5, departs: fmt(c + 15), arrives: fmt(c + 41), walk: 9, transfers: 0, crowd: 1, seat: 4, reliability: 90, ride: 22, cars: [1, 1, 1, 1, 1, 2, 1, 1], towards: to },
+      { id: "switch", kind: "bus", title: "Bus instead", service: "Local bus · direct", mode: "bus", platform: "Nearest stop", leaveBy: fmt(c + 3), walkTo: 3, departs: fmt(c + 10), arrives: fmt(c + 44), walk: 6, transfers: 0, crowd: 1, seat: 3, reliability: 76, ride: 31, cars: null, towards: to }
     ]
   };
   genericCache[key] = d;
@@ -385,7 +386,7 @@ function renderToday() {
         <div class="alert-icon">!</div>
         <div><span class="source">${esc(d.alert.source)}</span><strong>${esc(d.alert.title)}</strong><p>${esc(d.alert.copy)}</p><small>Updated ${d.alert.updated} · next update ${d.alert.next}</small></div>
       </div>`}
-      ${lateBy(rec, d) && state.prefs.has("seat") ? `<div class="tradeoff-banner"><b>Trade-off:</b> ${esc(rec.title.toLowerCase())} is more comfortable but arrives <b>${lateBy(rec, d)} min after</b> your ${d.target} ${d.targetLabel}.<button class="btn link sm" data-act="prefer-ontime">Prioritise on-time arrival</button></div>` : ""}
+      ${lateBy(rec, d) && state.prefs.has("seat") ? `<div class="tradeoff-banner"><b>Trade-off:</b> ${esc(lcT(rec.title))} is more comfortable but arrives <b>${lateBy(rec, d)} min after</b> your ${d.target} ${d.targetLabel}.<button class="btn link sm" data-act="prefer-ontime">Prioritise on-time arrival</button></div>` : ""}
       <div class="route-options">${d.options.map(o => routeCard(o, d, rec)).join("")}</div>
     </section>
     <p class="data-note">Arrival times, crowding and seat chances are estimates, not guarantees. Always follow official transport advice.</p>`;
@@ -762,8 +763,8 @@ const SHEETS = {
   switchConfirm(id) {
     const d = current(), o = d.options.find(x => x.id === id), cur = selectedOption(d);
     const a = cur ? arrEnd(o) - arrEnd(cur) : 0;
-    return `<p class="overline">SWITCH ROUTE</p><h3>Switch to ${esc(o.title.toLowerCase())}?</h3>
-      <p class="sheet-lede">Your current journey (${esc(cur ? cur.title.toLowerCase() : "")}) ends and this one starts from your current step. ${a === 0 ? "Arrival stays the same" : a > 0 ? `You'd arrive <b>${a} min later</b>` : `You'd arrive <b>${-a} min earlier</b>`} (${o.arrives}).${state.sharing?.live ? ` <b>${esc(state.sharing.to)}</b> keeps getting updates on the new route.` : ""}${state.reminder ? " Your arrival reminder moves to the new route." : ""}</p>
+    return `<p class="overline">SWITCH ROUTE</p><h3>Switch to ${esc(lcT(o.title))}?</h3>
+      <p class="sheet-lede">Your current journey (${esc(cur ? lcT(cur.title) : "")}) ends and this one starts from your current step. ${a === 0 ? "Arrival stays the same" : a > 0 ? `You'd arrive <b>${a} min later</b>` : `You'd arrive <b>${-a} min earlier</b>`} (${o.arrives}).${state.sharing?.live ? ` <b>${esc(state.sharing.to)}</b> keeps getting updates on the new route.` : ""}${state.reminder ? " Your arrival reminder moves to the new route." : ""}</p>
       <div class="sheet-actions"><button class="btn primary full" data-act="switch-to" data-id="${o.id}">Switch route</button><button class="btn ghost full" data-act="close-sheet">Keep current journey</button></div>`;
   },
   endConfirm() {
@@ -801,10 +802,10 @@ const SHEETS = {
       return parts.join(" · ");
     };
     return `<p class="overline">${mode === "board" ? "CAN'T BOARD OR DELAYED?" : "COMPARE ALTERNATIVES"}</p><h3>Other ways to ${esc(d.to)}</h3>
-      <p class="sheet-lede">Compared with <b>${esc(cur.title.toLowerCase())}</b> (arrives ${cur.arrives}).${mode === "board" ? " If this service is too full to board, the next service and other routes are below." : ""}</p>
+      <p class="sheet-lede">Compared with <b>${esc(lcT(cur.title))}</b> (arrives ${cur.arrives}).${mode === "board" ? " If this service is too full to board, the next service and other routes are below." : ""}</p>
       ${alts.map(o => `<article class="alt-card"><div><strong>${esc(o.title)}</strong><small>Departs ${o.departs} · arrives ${o.arrives} · ${CROWD[o.crowd].toLowerCase()} crowding</small><p>${diff(o)}</p></div>
         <button class="btn primary sm" data-act="${state.phase === "active" ? "switch-ask" : "switch-to"}" data-id="${o.id}">Switch</button></article>`).join("")}
-      <button class="btn ghost full" data-act="close-sheet">Keep ${esc(cur.title.toLowerCase())}</button>`;
+      <button class="btn ghost full" data-act="close-sheet">Keep ${esc(lcT(cur.title))}</button>`;
   },
   report(step) {
     const d = current(), o = focusOption(d), f = state.form;
@@ -1027,9 +1028,9 @@ const A = {
   "switch-to": b => {
     const d = current(), o = d.options.find(x => x.id === b.dataset.id);
     closeSheet();
-    if (state.phase !== "active") { state.preview = o.id; renderJourney(); $("#screen-details").scrollTop = 0; toast(`Showing ${o.title.toLowerCase()}`, `Arrives ${o.arrives}.`); return; }
+    if (state.phase !== "active") { state.preview = o.id; renderJourney(); $("#screen-details").scrollTop = 0; toast(`Showing ${lcT(o.title)}`, `Arrives ${o.arrives}.`); return; }
     state.selected = o.id; state.preview = o.id; state.stage = Math.min(state.stage, 1); openOverlay("details");
-    toast(`Switched to ${o.title.toLowerCase()}`, state.sharing?.live ? `Arrival ${o.arrives}. ${state.sharing.to} has been updated.` : `Arrives ${o.arrives}.`);
+    toast(`Switched to ${lcT(o.title)}`, state.sharing?.live ? `Arrival ${o.arrives}. ${state.sharing.to} has been updated.` : `Arrives ${o.arrives}.`);
   },
   report: () => { const o = focusOption(current()); state.form = { car: o.cars ? null : 0 }; openSheet("report"); },
   "r-car": b => { state.form.car = +b.dataset.car; refreshSheet(); },
