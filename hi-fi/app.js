@@ -614,7 +614,7 @@ function renderProfile() {
   const el = $("#screen-profile"), n = state.journeys.length;
   const row = p => {
     const l = state.prefLevel[p.id] || 0, on = l > 0;
-    return `<div class="pref-item lvl${on ? " on" : ""}"><div class="pl-head"><span>${p.label}</span><output id="lvl-${p.id}">${on ? l : "Off"}</output></div>
+    return `<div class="pref-item lvl${on ? " on" : ""}"><div class="pl-head"><span>${p.label}</span><output id="lvl-${p.id}">${l}</output></div>
       <div class="pref-level"><input type="range" min="0" max="10" step="1" value="${l}" data-level="${p.id}" aria-label="How much ${p.label} matters, 0 to 10"><div class="scale"><span>0 · Not considered</span><span>10 · Most important</span></div></div></div>`;
   };
   const toggle = (k, t, sub) => `<div class="toggle-card"><span><span><strong>${t}</strong><small>${sub}</small></span></span><button class="toggle${state[k] ? " active" : ""}" data-act="toggle" data-key="${k}" aria-pressed="${state[k]}" aria-label="${t}"><i></i></button></div>`;
@@ -775,7 +775,7 @@ function refreshSheet() { if (state.sheet) openSheet(state.sheet.kind, state.she
 
 const SHEETS = {
   prefs() {
-    const row = p => { const on = state.prefs.has(p.id), unset = on && !(state.prefLevel[p.id] > 0); return `<button class="pref-row${on ? " on" : ""}" data-act="pref" data-pref="${p.id}" role="checkbox" aria-checked="${on}"><i>${on ? ICON.check : ""}</i><span>${p.label}${unset ? `<small class="pref-note">Off in Profile · counts as medium (5) today</small>` : ""}</span></button>`; };
+    const row = p => { const on = state.prefs.has(p.id), unset = on && !(state.prefLevel[p.id] > 0); return `<button class="pref-row${on ? " on" : ""}" data-act="pref" data-pref="${p.id}" role="checkbox" aria-checked="${on}"><i>${on ? ICON.check : ""}</i><span>${p.label}${unset ? `<small class="pref-note">0 in Profile · counts as 5 today</small>` : ""}</span></button>`; };
     const n = state.prefs.size;
     const dirty = JSON.stringify([...state.prefs].sort()) !== JSON.stringify([...state.prefDefault].sort());
     return `<p class="overline">YOUR PREFERENCES</p><h3>What matters to you?</h3>
@@ -1275,7 +1275,7 @@ document.addEventListener("click", e => {
 });
 document.addEventListener("input", e => {
   const lvIn = e.target.closest("[data-level]");
-  if (lvIn) { const k = lvIn.dataset.level, v = +lvIn.value; state.prefLevel[k] = v; const o = $(`#lvl-${k}`); if (o) o.textContent = v ? v : "Off"; lvIn.closest(".pref-item")?.classList.toggle("on", v > 0); return; }
+  if (lvIn) { const k = lvIn.dataset.level, v = +lvIn.value; state.prefLevel[k] = v; const o = $(`#lvl-${k}`); if (o) o.textContent = v; lvIn.closest(".pref-item")?.classList.toggle("on", v > 0); return; }
   const si = e.target.closest("[data-s]");
   if (si && state.search) { state.search[si.dataset.s] = si.value; filterSaved(); return; }
   const f = e.target.closest("[data-f]");
@@ -1289,7 +1289,7 @@ document.addEventListener("input", e => {
 });
 document.addEventListener("change", e => {
   const lvIn = e.target.closest("[data-level]");
-  if (lvIn) { const same = !tempPrefs(); state.prefDefault = usualSet(); if (same) state.prefs = new Set(state.prefDefault); renderToday(); renderMini(); toast("Saved", `${prefLabel(lvIn.dataset.level)}: ${+lvIn.value ? `${lvIn.value}/10` : "off"}. Saved to your account.`); }
+  if (lvIn) { const same = !tempPrefs(); state.prefDefault = usualSet(); if (same) state.prefs = new Set(state.prefDefault); renderToday(); renderMini(); toast("Saved", `${prefLabel(lvIn.dataset.level)}: ${lvIn.value}/10. Saved to your account.`); }
 });
 document.addEventListener("keydown", e => {
   if (e.key === "Escape") { closeSheet(); closeSearch(); }
