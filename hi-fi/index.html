@@ -11,7 +11,7 @@
   <meta name="description" content="Waywise high-fidelity prototype: personalised commute decisions under crowding and disruption.">
   <link rel="manifest" href="manifest.webmanifest">
   <title>Waywise — High-fidelity prototype</title>
-  <link rel="stylesheet" href="styles.css?v=202610191500">
+  <link rel="stylesheet" href="styles.css?v=202610191600">
 </head>
 <body>
   <div class="demo-shell">
@@ -35,7 +35,7 @@
       <details class="changes">
         <summary>What changed in v4.8–4.10</summary>
         <ol>
-          <li>Saved journey = where (From/To); schedule = when (days + time, per direction). Route first, schedule optional.</li>
+          <li>Saved journey = where (From/To); schedule = when (days + time). Route first, schedule optional. Merged into one Edit sheet in v4.13.</li>
           <li>After saving a journey: “Add to schedule” or “Not now”. Schedule has “Add to &lt;day&gt;”.</li>
           <li>Tap a scheduled trip: Show routes now, Change time or Remove, for only this date or every week; Edit saved journey changes the route.</li>
           <li>Route details: Start journey fixed at the bottom; “Not started yet” removed.</li>
@@ -46,6 +46,8 @@
           <li>Recommended route always listed first; leg icons no longer wrap; toast no longer covers the drawer collapse button; shorter preference chip.</li>
           <li>v4.12 · Profile: every preference is a 0–10 slider (0 = not considered), plus transport modes. Today: the same six preferences as checkboxes for this journey only (no levels, no transport modes); a link goes to Profile.</li>
           <li>Saved journeys: “Add journey” sits inside the Journeys view (top of the list); first-run save asks “Add to schedule?” like other saves.</li>
+          <li>v4.13 · Saved journeys follow TripView: one row per one-way journey (From → To · name · repeat days). One Edit sheet holds route, name and optional repeat days + time; return trips are separate journeys (“Add return trip”).</li>
+          <li>v4.13 · Route cards: tap a card for details; only the recommended card has Start.</li>
           <li>Transport modes: Today’s preferences use the same Train / Metro / Bus / Ferry / Light rail list as Profile (this journey only, or save to usual).</li>
         </ol>
       </details>
@@ -109,6 +111,6 @@
       <div class="perm" id="perm"></div>
     </main>
   </div>
-  <script src="app.js?v=202610191500"></script>
+  <script src="app.js?v=202610191600"></script>
 </body>
 </html>
