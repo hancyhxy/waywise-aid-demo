@@ -354,9 +354,10 @@ function renderToday() {
   const leave = fmt(Math.min(...d.options.map(o => toMin(o.leaveBy))));
   const np = state.prefs.size;
 
-  const prefBar = `<div class="filter-row" aria-label="Journey preferences">
-      <button class="fchip${np ? " on" : ""}" data-act="prefs">${ICON.sliders}${np ? `Preferences · ${np}` : "Preferences"}</button>
-      ${[...state.prefs].map(id => `<button class="fchip on" data-act="pref" data-pref="${id}" aria-label="Remove ${prefLabel(id)}">${prefLabel(id)} ×</button>`).join("")}
+  const plist = [...state.prefs].map(prefLabel);
+  const prefBar = `<div class="rank-row">
+      <span class="rank-cap">Ranked by</span>
+      <button class="fchip${np ? " on" : ""}" data-act="prefs">${ICON.sliders}${np ? `${esc(plist.slice(0, 2).join(", "))}${np > 2 ? ` +${np - 2}` : ""} · this journey` : "Your default preferences"}<b class="chev">▾</b></button>
     </div>`;
   el.innerHTML = `${header}
     ${sharing}
