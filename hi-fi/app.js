@@ -612,7 +612,7 @@ function renderProfile() {
     <article class="account-card"><div class="acc-row">${ICON.cloud}<div><strong>Saved to your account</strong><small>alex.commuter@email.com<br>${n ? `${n} saved journey${n > 1 ? "s" : ""}, your schedule and preferences sync` : "Your preferences sync"} across your devices.</small></div></div></article>
     <section class="block">
       <div class="sec-head"><p class="overline">USUAL PREFERENCES</p><span class="saved-state">${ICON.check}Saved</span></div>
-      <p class="hint">Used at the start of every journey. Changes on Today apply to that journey only, unless you tap Save for next time.</p>
+      <p class="hint">Used at the start of every journey. Changes on Today apply to that journey only, unless you save them to your usual preferences.</p>
       <article class="pref-group"><div class="pref-list">${[...PREFS, MORE_PREFS[0]].map(row).join("")}</div></article>
       <div class="pref-card"><strong>Transport modes</strong><small>Turn off modes you'd rather not use. We'll explain if no route avoids them.</small>
         <div class="mode-chips">${MODES.map(([k, l]) => `<button class="chip${state.defaults.modes[k] ? " active" : ""}" data-act="mode" data-mode="${k}" role="checkbox" aria-checked="${state.defaults.modes[k]}"><i>${state.defaults.modes[k] ? ICON.check : ""}</i>${l}</button>`).join("")}</div>
@@ -774,7 +774,7 @@ const SHEETS = {
       <div class="pref-list">${MORE_PREFS.map(row).join("")}</div>
       <div class="sheet-actions">
         <button class="btn primary full" data-act="close-sheet">Done${n ? ` · ${n} selected` : ""}</button>
-        ${dirty ? `<div class="split"><button class="btn link sm" data-act="reset-prefs">Reset</button><button class="btn link sm" data-act="save-default">Save for next time</button></div>` : ""}
+        ${dirty ? `<div class="split"><button class="btn link sm" data-act="reset-prefs">Reset</button><button class="btn link sm" data-act="save-default">Save to usual preferences</button></div>` : ""}
       </div>`;
   },
   switchConfirm(id) {
@@ -793,7 +793,7 @@ const SHEETS = {
   method() {
     return `<p class="overline">HOW RECOMMENDATIONS WORK</p><h3>Useful detail, not a black box</h3>
       <div class="method-item"><span>1</span><div><strong>Current conditions</strong><p>Delays, frequency, crowding and when the data was last updated. Operator updates are labelled separately from Waywise predictions.</p></div></div>
-      <div class="method-item"><span>2</span><div><strong>Your preferences</strong><p>Your usual preferences start every journey. Changes on Today apply to that journey only, unless you save them for next time.</p></div></div>
+      <div class="method-item"><span>2</span><div><strong>Your preferences</strong><p>Your usual preferences start every journey. Changes on Today apply to that journey only, unless you save them to your usual preferences.</p></div></div>
       <div class="method-item"><span>3</span><div><strong>Arrival estimate confidence</strong><p>How closely arrival times and crowding are likely to match what's shown.</p></div></div>
       <button class="btn ghost full" data-act="close-sheet">Done</button>`;
   },
@@ -1058,7 +1058,7 @@ const A = {
   pref: b => { const k = b.dataset.pref; state.prefs.has(k) ? state.prefs.delete(k) : state.prefs.add(k); renderAll(); refreshSheet(); },
   "more-prefs": () => { state.showMore = !state.showMore; renderToday(); },
   "reset-prefs": () => { state.prefs = new Set(state.prefDefault); renderAll(); refreshSheet(); },
-  "save-default": () => { state.prefDefault = new Set(state.prefs); renderAll(); refreshSheet(); toast("Saved for next time", "Every journey now starts with these preferences."); },
+  "save-default": () => { state.prefDefault = new Set(state.prefs); renderAll(); refreshSheet(); toast("Saved to usual preferences", "Every journey now starts with these."); },
   "pref-def": b => { const k = b.dataset.pref; const on = state.prefDefault.has(k); on ? state.prefDefault.delete(k) : state.prefDefault.add(k); on ? state.prefs.delete(k) : state.prefs.add(k); renderAll(); toast("Saved", "Your usual preferences are saved to your account."); },
   "prefer-ontime": () => { state.prefs.delete("seat"); state.prefs.add("sooner"); renderToday(); },
   method: () => openSheet("method"),
