@@ -618,7 +618,7 @@ function renderProfile() {
   };
   const toggle = (k, t, sub) => `<div class="toggle-card"><span><span><strong>${t}</strong><small>${sub}</small></span></span><button class="toggle${state[k] ? " active" : ""}" data-act="toggle" data-key="${k}" aria-pressed="${state[k]}" aria-label="${t}"><i></i></button></div>`;
   el.innerHTML = `
-    <header class="app-header"><div><p class="overline">PROFILE &amp; ACCOUNT</p><h2>Alex</h2></div><span class="avatar big">AL</span></header>
+    <header class="app-header"><div><p class="overline">PROFILE &amp; ACCOUNT</p><h2>Alex</h2></div></header>
     <article class="account-card"><div class="acc-row">${ICON.cloud}<div><strong>Saved to your account</strong><small>alex.commuter@email.com<br>${n ? `${n} saved journey${n > 1 ? "s" : ""}, your schedule and preferences sync` : "Your preferences sync"} across your devices.</small></div></div></article>
     <section class="block">
       <div class="sec-head"><p class="overline">USUAL PREFERENCES</p><span class="saved-state">${ICON.check}Saved</span></div>
