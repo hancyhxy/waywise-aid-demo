@@ -22,10 +22,10 @@ Source: Evelyn's synthesis in `a2-deliverables/03-usability-evaluation/synthesis
 | R3 | Weekday scheduling is optional; skip or change one date without editing the schedule | Schedule view, Add journey |
 | R4 | Route-based names ("UTS (Central) → Chatswood"); custom names optional; no day templates | Saved journeys, forms |
 | R5 | **Profile** from the AL avatar: account sync status and default preferences | Profile tab |
-| R6 | Today opens on the journey that fits the scenario's day and time ("Suggested from your schedule"), with a **Today's plan** strip (done / now / later) built from the weekly template. Google Maps-style layering: compact From/To card with a swap button; tapping From/To opens a full-height **Change journey** layer (type a route, or tap today's or other saved journeys) without reloading Today | Today |
+| R6 | Today opens on the journey from that day's schedule, labelled "Based on your Wednesday schedule, we recommend". No schedule for the day (or "No commute" / skipped) → empty From/To card. From/To card with swap button and Leave / Arrive by; tapping From/To opens a full-height **Change journey** layer (type a route, or tap today's or other saved journeys) without reloading Today | Today |
 | R7 | Separate scopes: Edit today's journey / Edit saved journey / Edit this occurrence / Edit recurring schedule, with matching titles and Save labels | Sheets |
 | R8 | Select route → brief confirmation → **Journey details** → Start journey → active journey | Today, details, active |
-| R9 | Filter row under "What should I do?": Leave ▾, Arrive by ▾, Preferences ▾. The Preferences sheet lists every option at once with "Select all that apply" and check marks | Today |
+| R9 | "Preferences ▾" under "What should I do?" opens a sheet listing every option with "Select all that apply" and check marks; active choices are shown next to it | Today |
 | R10 | Today's choices apply to this journey only; explicit "Save as default"; Reset | Today, Profile |
 | R11 | More preferences: less waiting, predictable arrival, transport modes | Today, Profile |
 | R12 | Wait / Departs / Arrives shown separately; "9 min later than the next train" | Route cards |

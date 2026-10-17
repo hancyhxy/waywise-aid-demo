@@ -311,13 +311,15 @@ function renderToday() {
       <button class="avatar" data-act="tab" data-tab="profile" aria-label="Open Profile and account">AL</button>
     </header>`;
   if (!d) {
-    el.innerHTML = `${header}${todayPlan()}
-      <article class="od-card" aria-label="Choose a route">
-        <button class="od-row" data-act="s-open" data-focus="from"><i class="od-dot from"></i><span class="ph">Where from?</span></button>
-        <button class="od-row" data-act="s-open" data-focus="to"><i class="od-dot to"></i><span class="ph">Where to?</span></button>
-        <i class="od-line" aria-hidden="true"></i>
+    el.innerHTML = `${header}
+      <article class="search-card" aria-label="Choose a route">
+        <div class="od">
+          <button class="od-field" data-act="s-open" data-focus="from"><i class="od-dot from"></i><span><small>From</small><strong class="ph">Where from?</strong></span></button>
+          <button class="od-field" data-act="s-open" data-focus="to"><i class="od-dot to"></i><span><small>To</small><strong class="ph">Where to?</strong></span></button>
+          <i class="od-line" aria-hidden="true"></i>
+        </div>
       </article>
-      <p class="data-note">Pick a journey from today's plan or enter a route.</p>`;
+      <p class="data-note">Nothing on your schedule right now. Tap From or To to pick a saved journey or enter a route.</p>`;
     return;
   }
   const rank = ranked(d), rec = rank[0], L = d.L;
@@ -325,7 +327,7 @@ function renderToday() {
   const status = state.today
     ? (L.key ? `<p class="suggest today"><span>Changed for today only</span><button class="btn link sm" data-act="f-clear-today">Back to saved journey</button></p>`
       : `<p class="suggest today"><span>Route for today only</span><button class="btn link sm" data-act="save-adhoc">Save as journey</button></p>`)
-    : sched && state.leg === state.suggested ? `<p class="suggest">${ICON.check}<span>Suggested from your schedule</span></p>`
+    : sched && state.leg === state.suggested ? `<p class="suggest">${ICON.check}<span>Based on your ${DAY_NAME[state.day]} schedule, we recommend</span></p>`
       : `<p class="suggest"><span>Saved journey${L.j.name ? ` · ${esc(L.j.name)}` : ""}</span></p>`;
   const active = state.phase === "active" ? selectedOption(d) : null;
   const sharing = state.sharing && state.sharing.live ? `<div class="share-banner">${ICON.share}<span>Sharing arrival updates with <b>${esc(state.sharing.to)}</b> · ${esc(state.sharing.until)}</span><button class="btn link sm" data-act="stop-share">Stop</button></div>` : "";
@@ -336,14 +338,19 @@ function renderToday() {
     ${S[state.scenario] && state.leg === S[state.scenario].leg && !state.today ? `<p class="mood">${esc(S[state.scenario].copy)}</p>` : ""}
     ${active ? `<button class="active-banner" data-act="open-active"><span class="pulse"></span><span><b>Journey active</b> · ${esc(active.title)} · arrives ${active.arrives}</span><span aria-hidden="true">›</span></button>` : ""}
     ${sharing}
-    ${todayPlan()}
-    <article class="od-card" aria-label="Journey for today">
-      <button class="od-row" data-act="s-open" data-focus="from" aria-label="Change start"><i class="od-dot from"></i><span>${esc(d.from)}</span></button>
-      <button class="od-row" data-act="s-open" data-focus="to" aria-label="Change destination"><i class="od-dot to"></i><span>${esc(d.to)}</span></button>
-      <i class="od-line" aria-hidden="true"></i>
-      <button class="od-swap" data-act="swap-dir" aria-label="Swap to the return direction">${ICON.swap}</button>
-    </article>
     ${status}
+    <article class="search-card" aria-label="Journey for today">
+      <div class="od">
+        <button class="od-field" data-act="s-open" data-focus="from" aria-label="Change start"><i class="od-dot from"></i><span><small>From</small><strong>${esc(d.from)}</strong></span></button>
+        <button class="od-field" data-act="s-open" data-focus="to" aria-label="Change destination"><i class="od-dot to"></i><span><small>To</small><strong>${esc(d.to)}</strong></span></button>
+        <i class="od-line" aria-hidden="true"></i>
+        <button class="swap-fab" data-act="swap-dir" aria-label="Swap to the return direction">${ICON.swap}</button>
+      </div>
+      <div class="when">
+        <button data-act="edit-today"><small>Leave</small><strong>Today · ${leave}</strong></button>
+        <button data-act="edit-today"><small>${d.targetLabel === "shift start" ? "Shift starts" : "Arrive by"}</small><strong>${d.target || "Any time"}</strong></button>
+      </div>
+    </article>
 
     <div class="alert-card ${d.alert.tone}" role="status">
       <div class="alert-icon">${d.alert.tone === "green" ? ICON.check : "!"}</div>
@@ -355,15 +362,11 @@ function renderToday() {
         <div><p class="overline">YOUR OPTIONS</p><h3>What should I do?</h3></div>
         <button class="info-button" data-act="method" aria-label="How recommendations work">?</button>
       </div>
-      <div class="filter-row" role="group" aria-label="Journey filters">
-        <button class="fchip" data-act="edit-today"><small>Leave</small> ${leave} ▾</button>
-        <button class="fchip" data-act="edit-today"><small>${d.targetLabel === "shift start" ? "Shift" : "Arrive"}</small> ${d.target || "Any time"} ▾</button>
+      <div class="pref-bar">
         <button class="fchip${np ? " on" : ""}" data-act="prefs">${ICON.compare} Preferences${np ? ` · ${np}` : ""} ▾</button>
+        <span>${np ? `For this journey: <b>${[...state.prefs].map(prefLabel).join(" · ")}</b>` : "Using your default travel preferences"}</span>
       </div>
-      <div class="pref-scope">
-        ${np ? `<span>For this journey: <b>${[...state.prefs].map(prefLabel).join(" · ")}</b></span><button class="btn link sm" data-act="save-default">Save as default</button>`
-      : `<span>Using your default travel preferences</span><button class="btn link sm" data-act="prefs">Tune</button>`}
-      </div>
+      ${np ? `<button class="btn link sm save-default-link" data-act="save-default">Save as default</button>` : ""}
       <div class="confidence-line">
         <button class="certainty" data-act="certainty"><i class="c-${certainty(d.confidence).toLowerCase()}"></i>Arrival estimate confidence: <b>${certainty(d.confidence)}</b> ⓘ</button>
         <span>Live data · updated ${d.alert.updated}</span>
@@ -406,7 +409,7 @@ function openSearch(focus) {
   lay.classList.add("open");
   filterSaved(true);
   const inp = lay.querySelector(`[data-s="${focus || "to"}"]`);
-  if (inp) setTimeout(() => { inp.focus(); inp.select(); }, 220);
+  if (inp) setTimeout(() => { inp.focus({ preventScroll: true }); inp.select(); }, 220);
 }
 function closeSearch() { state.search = null; $("#search-layer").classList.remove("open"); }
 function filterSaved(initial) {
@@ -882,6 +885,10 @@ function setTab(tab) { state.tab = tab; state.overlay = null; show(); $(`#screen
 function openOverlay(name) { state.overlay = name; show(); $(`#screen-${name}`).scrollTop = 0; }
 
 function resetJourneyState() { state.prefs = new Set(); state.selected = null; state.phase = "options"; state.stage = 0; state.today = null; state.sharing = null; state.reports = []; state.overlay = null; }
+/* If today's suggested journey is skipped or the day is marked "No commute", Today goes back to an empty card. */
+function syncSuggestion() {
+  if (state.leg && state.leg === state.suggested && !state.today && !scheduledToday(state.day).some(l => l.key === state.leg && !l.skip)) { state.leg = null; state.suggested = null; resetJourneyState(); }
+}
 function useLeg(key) {
   if (!legInfo(key)) return;
   const changed = key !== state.leg;
@@ -896,7 +903,7 @@ function setScenario(id) {
   state.scenario = id; resetJourneyState();
   state.occ = clone(SEED_OCC); state.noCommute = new Set(); state.form = {};
   if (id === "newuser") { state.journeys = []; state.leg = null; state.day = "tue"; state.clock = "08:40"; state.schedDay = "tue"; }
-  else { const s = S[id]; state.journeys = clone(SEED_JOURNEYS); state.leg = s.leg; state.suggested = s.leg; state.day = s.day; state.clock = s.clock; state.schedDay = s.day; }
+  else { const s = S[id]; state.journeys = clone(SEED_JOURNEYS); state.day = s.day; state.leg = scheduledToday(s.day).some(l => l.key === s.leg && !l.skip) ? s.leg : null; state.suggested = state.leg; state.clock = s.clock; state.schedDay = s.day; }
   $$(".demo-notes .scenario").forEach(b => b.classList.toggle("active", b.dataset.scenario === id));
   try { localStorage.setItem("waywise-hifi-scenario", id); } catch (e) { }
   closeSheet(); closeSearch(); setTab("today");
@@ -990,9 +997,9 @@ const A = {
   },
   jview: b => { state.jview = b.dataset.view; renderJourneys(); },
   "sched-day": b => { state.schedDay = b.dataset.day; renderJourneys(); },
-  skip: b => { const k = `${state.schedDay}|${b.dataset.key}`; state.occ[k] = { ...(state.occ[k] || {}), skip: true }; renderJourneys(); toast("Skipped for this date", `${fullDate(state.schedDay)} only. Your schedule is unchanged.`); },
+  skip: b => { const k = `${state.schedDay}|${b.dataset.key}`; state.occ[k] = { ...(state.occ[k] || {}), skip: true }; syncSuggestion(); renderAll(); toast("Skipped for this date", `${fullDate(state.schedDay)} only. Your schedule is unchanged.`); },
   unskip: b => { const k = `${state.schedDay}|${b.dataset.key}`; if (state.occ[k]) delete state.occ[k].skip; renderJourneys(); },
-  "toggle-nocommute": () => { const d = state.schedDay; state.noCommute.has(d) ? state.noCommute.delete(d) : state.noCommute.add(d); renderJourneys(); },
+  "toggle-nocommute": () => { const d = state.schedDay; state.noCommute.has(d) ? state.noCommute.delete(d) : state.noCommute.add(d); syncSuggestion(); renderAll(); },
   "mode": b => { const k = b.dataset.mode; state.defaults.modes[k] = !state.defaults.modes[k]; state.form.moreDefaults = true; renderProfile(); },
   "save-defaults": () => { state.savedDefaults = clone(state.defaults); renderAll(); toast("Preferences saved", "Saved to your account. Applies to new journeys."); },
   "reset-defaults": () => { state.defaults = clone(DEFAULTS); renderAll(); },
@@ -1058,6 +1065,7 @@ const A = {
 };
 
 /* ---------- events ---------- */
+$("#phone").addEventListener("scroll", e => { if (e.target.id === "phone") { e.target.scrollTop = 0; e.target.scrollLeft = 0; } });
 document.addEventListener("click", e => {
   const sc = e.target.closest("[data-scenario]");
   if (sc) { setScenario(sc.dataset.scenario); return; }

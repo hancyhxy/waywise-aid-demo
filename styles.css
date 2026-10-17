@@ -544,3 +544,11 @@ body.export .demo-notes { display:none; }
 @media (max-width:800px) { .search-layer { inset:env(safe-area-inset-top,0px) 0 0; } }
 
 #search-layer [hidden] { display:none !important; }
+
+.plan+.suggest,.mood+.suggest { margin-top:0; }
+.pref-bar { display:flex; align-items:center; gap:10px; }
+.pref-bar span { flex:1; min-width:0; color:#41454b; font-size:12.5px; line-height:1.35; }
+.save-default-link { margin-top:2px; padding-left:0; }
+
+/* the phone frame must never scroll itself (focus/scrollIntoView could shift it) */
+.phone { overflow:clip; }
