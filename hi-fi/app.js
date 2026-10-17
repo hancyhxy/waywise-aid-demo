@@ -434,8 +434,8 @@ function openSearch(focus) {
   const others = allLegs().filter(l => !todayKeys.has(l.key));
   const lay = $("#search-layer");
   lay.innerHTML = `
+    <div class="sl-head"><button class="sl-back" data-act="s-close" aria-label="Back to Today">${ICON.back}<span>Change journey</span></button></div>
     <div class="sl-top">
-      <button class="sl-back" data-act="s-close" aria-label="Back">${ICON.back}</button>
       <div class="sl-od">
         <label><i class="od-dot from"></i><input data-s="from" value="${esc(state.search.from)}" placeholder="Where from?" autocomplete="off"></label>
         <label><i class="od-dot to"></i><input data-s="to" value="${esc(state.search.to)}" placeholder="Where to?" autocomplete="off"></label>

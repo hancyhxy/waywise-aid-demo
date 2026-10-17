@@ -881,3 +881,8 @@ button.conf-row { display:block; width:calc(100% - 4px); padding:0; border:0; ba
 .day-tag svg { width:12px; height:12px; }
 .day-tag.none { background:var(--chip); color:var(--muted); }
 .trip-list .trip-row:last-child { border-bottom:0; }
+
+/* v4.16: Change journey — back sits in its own header row, not inside the input card */
+.sl-head { padding:6px 8px 0; }
+.sl-head .sl-back { width:auto; height:40px; display:inline-flex; align-items:center; gap:2px; padding:0 8px 0 2px; font-size:16px; font-weight:700; color:var(--ink); }
+.sl-top { padding:6px 6px 6px 16px; }
