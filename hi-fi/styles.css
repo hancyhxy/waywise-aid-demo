@@ -880,3 +880,4 @@ button.conf-row { display:block; width:calc(100% - 4px); padding:0; border:0; ba
 .day-tag { display:inline-flex; align-items:center; gap:4px; padding:3px 8px; border-radius:7px; background:var(--accent-soft); color:var(--accent-ink); font-size:12px; font-weight:650; }
 .day-tag svg { width:12px; height:12px; }
 .day-tag.none { background:var(--chip); color:var(--muted); }
+.trip-list .trip-row:last-child { border-bottom:0; }

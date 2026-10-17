@@ -554,7 +554,7 @@ function renderJourneys() {
         <span class="trip-meta">${j.name ? `<small>${esc(j.name)}</small>` : ""}<span class="day-tag${hasSchedule(j) ? "" : " none"}">${ICON.calendar}${hasSchedule(j) ? daysShort(legDays(j)) : "No repeat days"}</span></span>
       </button>
       <button class="trip-edit" data-act="edit-saved" data-id="${j.id}" aria-label="Edit ${esc(j.from)} to ${esc(j.to)}">Edit</button>
-    </div>`).join("")}<button class="trip-add" data-act="add-journey">${ICON.plus} Add journey</button></article>
+    </div>`).join("")}</article>
     <p class="hint">Tap a journey to see routes now. Edit changes its route, name or repeat days.</p>`
     : `<article class="empty-card"><strong>No saved journeys yet</strong><p>Save a route once and reuse it any day. Repeat days are optional.</p><button class="btn primary sm" data-act="add-journey">${ICON.plus} Add journey</button></article>`;
   el.innerHTML = `
