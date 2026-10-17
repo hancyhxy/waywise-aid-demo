@@ -552,3 +552,13 @@ body.export .demo-notes { display:none; }
 
 /* the phone frame must never scroll itself (focus/scrollIntoView could shift it) */
 .phone { overflow:clip; }
+
+/* route cards open Route details */
+.route-card[data-act] { cursor:pointer; transition:transform .12s, box-shadow .12s; }
+.route-card[data-act]:active { transform:scale(.99); }
+.route-card.live { border:2px solid var(--green); padding:13px; background:#f6fbf7; }
+.rec-tag.live-tag { background:var(--green); }
+.status-pill.on { background:var(--green-soft); color:var(--green-ink); }
+.why-link { display:inline-block; margin-top:8px; padding:2px 0; border:0; background:none; color:var(--accent); font-size:12.5px; font-weight:650; }
+.rc-actions { gap:8px; }
+.rc-actions .btn { flex:1; }

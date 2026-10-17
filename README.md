@@ -24,7 +24,7 @@ Source: Evelyn's synthesis in `a2-deliverables/03-usability-evaluation/synthesis
 | R5 | **Profile** from the AL avatar: account sync status and default preferences | Profile tab |
 | R6 | Today opens on the journey from that day's schedule, labelled "Based on your Wednesday schedule, we recommend". No schedule for the day (or "No commute" / skipped) → empty From/To card. From/To card with swap button and Leave / Arrive by; tapping From/To opens a full-height **Change journey** layer (type a route, or tap today's or other saved journeys) without reloading Today | Today |
 | R7 | Separate scopes: Edit today's journey / Edit saved journey / Edit this occurrence / Edit recurring schedule, with matching titles and Save labels | Sheets |
-| R8 | Select route → brief confirmation → **Journey details** → Start journey → active journey | Today, details, active |
+| R8 | Route cards: tap the card or **View details** → Route details → **Start journey**; or **Start** directly on the card. "Journey started" confirmation, then the active journey. No separate "selected" state or Undo: viewing details commits nothing, and after starting, Switch / Compare alternatives / End journey give control back | Today, Route details, active |
 | R9 | Quick preferences stay on Today ("Tune this journey"): "Arrive sooner", "Prioritise a seat", "Select all that apply · applies to this journey only", check marks, Reset; less-used options under "More preferences" | Today |
 | R10 | Today's choices apply to this journey only; explicit "Save as default"; Reset | Today, Profile |
 | R11 | More preferences: less waiting, predictable arrival, transport modes | Today, Profile |
@@ -45,7 +45,7 @@ Three saved journeys with returns form the weekly template: University (Wollston
 
 Desktop: scenario buttons on the left. Phone: Profile → Switch demo scenario.
 
-Screenshot URLs: `?scenario=0|1|2|3`, `&prefs=sooner,seat,walk,transfer,reliable,wait`, `&select=take|wait|switch`, `&screen=today|journeys|schedule|profile|details|active`, `&sheet=why|compare|report|share|add|edit-today`, `&export=1` (phone only).
+Screenshot URLs: `?scenario=0|1|2|3`, `&prefs=sooner,seat,walk,transfer,reliable,wait`, `&select=take|wait|switch` (route shown in Route details), `&screen=today|journeys|schedule|profile|details|active`, `&sheet=why|compare|report|share|add|edit-today`, `&export=1` (phone only).
 
 ## Run locally
 
