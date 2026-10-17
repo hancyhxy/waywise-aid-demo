@@ -686,3 +686,14 @@ body.export .demo-notes { display:none; }
 .conf-pill { display:inline-flex; align-items:center; gap:6px; border:0; background:none; padding:4px 0; color:var(--muted); font-size:12px; font-weight:650; }
 .conf-pill i { width:8px; height:8px; border-radius:50%; }
 .results .section-heading { align-items:center; }
+/* Saved journeys: tappable direction rows (TripView pattern), single Edit */
+.leg-rows { margin-top:10px; border-top:1px solid var(--line-2); }
+.leg-row { width:100%; display:flex; align-items:center; gap:11px; padding:11px 2px; border:0; border-bottom:1px solid var(--line-2); background:none; text-align:left; }
+.lr-ic { flex:none; width:30px; height:30px; display:grid; place-items:center; border-radius:9px; background:var(--accent-soft); color:var(--accent); }
+.lr-ic svg { width:15px; height:15px; }
+.lr-main { flex:1; min-width:0; }
+.lr-main b { display:block; font-size:14px; }
+.lr-main small { display:block; margin-top:1px; color:var(--muted); font-size:12px; }
+.leg-row i { color:var(--faint); font-style:normal; font-size:18px; }
+.leg-row:active { background:var(--paper); }
+.jedit { margin-top:6px; padding-left:0; }

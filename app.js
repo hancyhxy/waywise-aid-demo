@@ -503,13 +503,11 @@ function renderJourneys() {
     <article class="jcard">
       <div class="jtop"><div><strong>${esc(j.from)} → ${esc(j.to)}</strong>${j.name ? `<small>${esc(j.name)}</small>` : ""}</div>
         <span class="sched-tag${j.days.length ? "" : " none"}">${j.days.length ? daysText(j.days) : "No schedule"}</span></div>
-      <p class="jmeta">${j.out ? `Usually leaves ${fmt(toMin(j.out))}` : "No usual time"}</p>
-      ${j.ret ? `<p class="jret">${ICON.swap}Return: ${esc(j.ret.from)} → ${esc(j.ret.to)}${j.ret.time ? ` · ${fmt(toMin(j.ret.time))}` : ""}</p>` : ""}
-      <div class="jactions">
-        <button class="btn primary sm" data-act="use-leg" data-leg="${j.id}:out">Use journey</button>
-        ${j.ret ? `<button class="btn link sm" data-act="use-leg" data-leg="${j.id}:ret">Use return</button>` : ""}
-        <button class="btn link sm" data-act="edit-saved" data-id="${j.id}">Edit saved journey</button>
+      <div class="leg-rows">
+        <button class="leg-row" data-act="use-leg" data-leg="${j.id}:out"><span class="lr-ic">${ICON.route}</span><span class="lr-main"><b>To ${esc(shortPlace(j.to))}</b><small>${j.out ? `Usually leaves ${fmt(toMin(j.out))}` : "Any time"}</small></span><i>›</i></button>
+        ${j.ret ? `<button class="leg-row" data-act="use-leg" data-leg="${j.id}:ret"><span class="lr-ic">${ICON.swap}</span><span class="lr-main"><b>Return to ${esc(shortPlace(j.ret.to))}</b><small>${j.ret.time ? `Usually leaves ${fmt(toMin(j.ret.time))}` : "Any time"}</small></span><i>›</i></button>` : ""}
       </div>
+      <button class="btn link sm jedit" data-act="edit-saved" data-id="${j.id}">Edit</button>
     </article>`).join("")
     : `<article class="empty-card"><strong>No saved journeys yet</strong><p>Save a route once and reuse it any day, with or without a schedule.</p><button class="btn primary sm" data-act="add-journey">${ICON.plus} Add journey</button></article>`;
   el.innerHTML = `
