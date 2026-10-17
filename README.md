@@ -1,24 +1,47 @@
-# Waywise — Interactive Concept Demo
+# Waywise — AID prototypes
 
-A mobile-first web prototype for the **Personalised Low-Crowding Route Recommendation** project.
+Live: https://hancyhxy.github.io/waywise-aid-demo/
 
-## Concept
+| Path | Course version | Notes |
+| --- | --- | --- |
+| `/` (root) | **v3 high-fidelity** | Built from the latest mid-fi and revised after the usability evaluation. |
+| `/mid-fi/` | v2 mid-fidelity | Revised after the lo-fi heuristic evaluation. |
+| `/mid-fi-v1-tested/` | v2 as tested | Frozen build used in the 14 Oct usability sessions. Do not edit. |
+| `/low-fi/` | v1 low-fidelity | Wireframes and 16:9 deck. |
+| `/concept/` | Original concept demo | The Sep 2026 concept that used to live at the root. Archived. |
+| `/v2/` | Exploration | State-aware Rushing/Normal/Tired variant (not the course "v2"). |
 
-Waywise helps commuters compare three actions when crowding or disruption changes a routine journey:
+## High-fidelity (root): what changed after usability testing
 
-- **Take** the next service
-- **Wait** for a potentially more comfortable service
-- **Switch** to an alternative route
+Source: Evelyn's synthesis in `a2-deliverables/03-usability-evaluation/synthesis-evelyn/` (`Prototype_Recommendation_List.pdf` R1–R19, `Prototype_Annotated_Review.pdf` pages 01–08). Visual language stays the mid-fi palette: neutral greys, one blue accent, red/amber/green for status only and always paired with text.
 
-Recommendations expose travel time, seat or boarding likelihood, walking, transfers, reliability and confidence instead of hiding the trade-off behind a single route result.
+| # | Change | Where |
+| --- | --- | --- |
+| R1 | "Add your first journey" empty state; only From and To are required | Scenario 0, Today |
+| R2 | Trips → **Saved journeys** with Use / Edit / Add journey actions | Saved journeys tab |
+| R3 | Weekday scheduling is optional; skip or change one date without editing the schedule | Schedule view, Add journey |
+| R4 | Route-based names ("UTS (Central) → Chatswood"); custom names optional; no day templates | Saved journeys, forms |
+| R5 | **Profile** from the AL avatar: account sync status and default preferences | Profile tab |
+| R6 | Saved routes and return trip on Today, with "Suggested · your usual Wednesday journey" | Today |
+| R7 | Separate scopes: Edit today's journey / Edit saved journey / Edit this occurrence / Edit recurring schedule, with matching titles and Save labels | Sheets |
+| R8 | Select route → brief confirmation → **Journey details** → Start journey → active journey | Today, details, active |
+| R9 | "Arrive sooner", "Prioritise a seat", "Select all that apply", check marks | Today |
+| R10 | Today's choices apply to this journey only; explicit "Save as default"; Reset | Today, Profile |
+| R11 | More preferences: less waiting, predictable arrival, transport modes | Today, Profile |
+| R12 | Wait / Departs / Arrives shown separately; "9 min later than the next train" | Route cards |
+| R13 | Badges in a fixed order (crowding, seat, walk, transfers, on-time %); active priorities outlined | Route cards |
+| R14 | "Why this route?" with reason, trade-off and preference conflicts; any route can be chosen | Cards, Why sheet |
+| R15 | "Arrival estimate confidence" with explanation; operator updates vs Waywise predictions; update times | Today, sheets |
+| R16 | Carriage crowding diagram with front/direction, labels, update time and an unavailable-data state | Details, active |
+| R17 | Compare alternatives from details and active journey; "Too full to board, or delayed?" | Details, active |
+| R18 | Report carriage conditions; shown as passenger reports, separate from operator data | Details, active |
+| R19 | Share journey: arrival time once, or time-limited live arrival updates (progress by stop, not GPS location) | Details, active |
 
-## Demo flows
+## Demo controls
 
-1. Switch between **Disruption**, **Normal day**, and **Full bus** scenarios.
-2. Toggle journey context such as **In a hurry** or **Need a seat** and observe the recommendation change.
-3. Choose an option or open its recommendation explanation.
-4. Open **My commutes** to switch across a seven-day routine: office, university, remote and personal days, with separate outbound and return journeys.
-5. Adjust default priorities using the bottom navigation.
+Desktop: scenario buttons on the left. Phone: Profile → Switch demo scenario.
+
+Screenshot URLs: `?scenario=0|1|2|3`, `&prefs=sooner,seat,walk,transfer,reliable,wait`, `&select=take|wait|switch`, `&screen=today|journeys|schedule|profile|details|active`, `&sheet=why|compare|report|share|add|edit-today`, `&export=1` (phone only).
 
 ## Run locally
 
@@ -26,4 +49,4 @@ Recommendations expose travel time, seat or boarding likelihood, walking, transf
 python3 -m http.server 4317 --directory .
 ```
 
-No build step, package installation, external font, analytics or live transport API is required. All displayed transport data is fictional and used only to demonstrate interaction design.
+No build step, dependencies or live transport API. All transport data is fictional.

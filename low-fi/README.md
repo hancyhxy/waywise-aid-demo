@@ -1,7 +1,7 @@
 # Waywise — Low-fidelity wireframes
 
 - Live wireframe: https://hancyhxy.github.io/waywise-aid-demo/low-fi/
-- Original mid-fidelity demo (unchanged): https://hancyhxy.github.io/waywise-aid-demo/
+- Original concept demo (archived): https://hancyhxy.github.io/waywise-aid-demo/concept/
 - Slides: [Waywise-Low-Fidelity-16x9.pptx](Waywise-Low-Fidelity-16x9.pptx)
 
 Created 2026-09-30 as a wireframe translation of the existing mid-fidelity prototype, not evidence of a historical earlier iteration or new user testing.
