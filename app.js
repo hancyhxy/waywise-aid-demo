@@ -84,6 +84,9 @@ const DAY_DATE = { mon: 14, tue: 15, wed: 16, thu: 17, fri: 18, sat: 19, sun: 20
 const fullDate = d => `${DAY_NAME[d]} ${DAY_DATE[d]} October`;
 const daysText = days => DAYS.filter(d => days.includes(d)).map(d => DAY_NAME[d].slice(0, 3)).join(", ");
 
+/* Alex's saved preferences (persona: wants a seat home, needs predictable arrivals). */
+const SEED_PREFS = ["seat", "reliable"];
+
 /* Saved journeys: route first; name, usual time, return and schedule are optional (R1–R4). */
 const SEED_JOURNEYS = [
   { id: "uni", from: "Wollstonecraft", to: "UTS (Central)", name: "University", out: "09:05", ret: { from: "UTS (Central)", to: "Wollstonecraft", time: "17:30" }, days: ["mon", "tue", "wed", "thu"] },
@@ -157,7 +160,7 @@ function generic(from, to, clock) {
 const DEFAULTS = { time: 9, seat: 5, crowd: 5, reliability: 9, walk: 5, transfer: 5, wait: 5, modes: { train: true, metro: true, bus: true, ferry: true, lightrail: true } };
 const state = {
   scenario: "disruption", journeys: clone(SEED_JOURNEYS), leg: "work:out", day: "wed", clock: "17:45",
-  prefs: new Set(), showMore: false, selected: null, phase: "options", stage: 0, tab: "today", overlay: null,
+  prefs: new Set(SEED_PREFS), showMore: false, selected: null, phase: "options", stage: 0, tab: "today", overlay: null,
   jview: "list", schedDay: "wed", occ: clone(SEED_OCC), noCommute: new Set(),
   defaults: clone(DEFAULTS), savedDefaults: clone(DEFAULTS), alertsOn: true, sharing: null, reports: [],
   today: null, reminder: null, locPerm: null, learn: true, actionable: true, sheet: null, form: {}, pview: "home"
@@ -963,7 +966,7 @@ function setScenario(id) {
   id = SCN_ALIAS[id] || id;
   if (id !== "newuser" && !S[id]) return;
   state.scenario = id; resetJourneyState();
-  state.occ = clone(SEED_OCC); state.noCommute = new Set(); state.form = {}; state.pview = "home"; state.prefs = new Set();
+  state.occ = clone(SEED_OCC); state.noCommute = new Set(); state.form = {}; state.pview = "home"; state.prefs = id === "newuser" ? new Set() : new Set(SEED_PREFS);
   if (id === "newuser") { state.journeys = []; state.leg = null; state.day = "tue"; state.clock = "08:40"; state.schedDay = "tue"; }
   else { const s = S[id]; state.journeys = clone(SEED_JOURNEYS); state.day = s.day; state.leg = scheduledToday(s.day).some(l => l.key === s.leg && !l.skip) ? s.leg : null; state.suggested = state.leg; state.clock = s.clock; state.schedDay = s.day; }
   $$(".demo-notes .scenario").forEach(b => b.classList.toggle("active", b.dataset.scenario === id));
