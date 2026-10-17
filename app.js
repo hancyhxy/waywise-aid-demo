@@ -511,7 +511,7 @@ function renderJourneys() {
       ${j.ret ? `<p class="jret">${ICON.swap}Return: ${esc(j.ret.from)} → ${esc(j.ret.to)}${j.ret.time ? ` · ${fmt(toMin(j.ret.time))}` : ""}</p>` : ""}
       <div class="jactions">
         <button class="btn primary sm" data-act="use-leg" data-leg="${j.id}:out">Use journey</button>
-        ${j.ret ? `<button class="btn ghost sm" data-act="use-leg" data-leg="${j.id}:ret">Use return</button>` : ""}
+        ${j.ret ? `<button class="btn link sm" data-act="use-leg" data-leg="${j.id}:ret">Use return</button>` : ""}
         <button class="btn link sm" data-act="edit-saved" data-id="${j.id}">Edit saved journey</button>
       </div>
     </article>`).join("")
@@ -567,9 +567,8 @@ const SLIDERS = [
 const MODES = [["train", "Train"], ["metro", "Metro"], ["bus", "Bus"], ["ferry", "Ferry"], ["lightrail", "Light rail"]];
 const dirty = () => JSON.stringify(state.defaults) !== JSON.stringify(state.savedDefaults);
 function slider(x) {
-  return `<div class="pref-card"><label for="s-${x.k}"><span><strong>${x.t}</strong><small>${x.s}</small></span><output>${state.defaults[x.k]}</output></label>
-    <input id="s-${x.k}" type="range" min="1" max="10" value="${state.defaults[x.k]}" data-slider="${x.k}">
-    <div class="scale"><span>1 · Less important</span><span>10 · More important</span></div></div>`;
+  return `<div class="prow"><div class="prow-top"><label for="s-${x.k}"><strong>${x.t}</strong><small>${x.s}</small></label><output>${state.defaults[x.k]}</output></div>
+    <input id="s-${x.k}" type="range" min="1" max="10" value="${state.defaults[x.k]}" data-slider="${x.k}"></div>`;
 }
 function renderProfile() {
   $("#screen-profile").innerHTML = `
@@ -581,19 +580,18 @@ function renderProfile() {
 
     <section class="block" id="defaults">
       <p class="overline">PERSONALISATION</p><h3>Default travel preferences</h3>
-      <p class="hint">These defaults apply to new journeys. Changes on Today affect only that journey unless you choose <b>Save as default</b>.</p>
-      ${SLIDERS.map(slider).join("")}
+      <p class="hint">1 = less important · 10 = more important. Changes save automatically and apply to new journeys; quick choices on Today affect only that journey.</p>
+      <article class="pref-group">
+        ${SLIDERS.map(slider).join("")}
+      </article>
       <details class="more-defaults"${state.form.moreDefaults ? " open" : ""}>
         <summary>More preferences</summary>
-        ${slider({ k: "wait", t: "Less waiting", s: "Shorter waits on the platform or at the stop" })}
+        <article class="pref-group">${slider({ k: "wait", t: "Less waiting", s: "Shorter waits on the platform or at the stop" })}</article>
         <div class="pref-card"><strong>Transport modes</strong><small>Turn off modes you'd rather not use. We'll explain if no route avoids them.</small>
           <div class="mode-chips">${MODES.map(([k, l]) => `<button class="chip${state.defaults.modes[k] ? " active" : ""}" data-act="mode" data-mode="${k}" role="checkbox" aria-checked="${state.defaults.modes[k]}"><i>${state.defaults.modes[k] ? ICON.check : ""}</i>${l}</button>`).join("")}</div>
         </div>
       </details>
-      <div class="save-row">
-        <button class="btn primary${dirty() ? "" : " saved"}" data-act="save-defaults" ${dirty() ? "" : "disabled"}>${dirty() ? "Save preferences" : `${ICON.check} Saved`}</button>
-        <button class="btn link sm" data-act="reset-defaults">Reset to defaults</button>
-      </div>
+      <button class="btn link sm" data-act="reset-defaults">Reset to defaults</button>
     </section>
 
     <section class="block">
@@ -1086,9 +1084,9 @@ const A = {
   skip: b => { const k = `${state.schedDay}|${b.dataset.key}`; state.occ[k] = { ...(state.occ[k] || {}), skip: true }; syncSuggestion(); renderAll(); toast("Skipped for this date", `${fullDate(state.schedDay)} only. Your schedule is unchanged.`); },
   unskip: b => { const k = `${state.schedDay}|${b.dataset.key}`; if (state.occ[k]) delete state.occ[k].skip; renderJourneys(); },
   "toggle-nocommute": () => { const d = state.schedDay; state.noCommute.has(d) ? state.noCommute.delete(d) : state.noCommute.add(d); syncSuggestion(); renderAll(); },
-  "mode": b => { const k = b.dataset.mode; state.defaults.modes[k] = !state.defaults.modes[k]; state.form.moreDefaults = true; renderProfile(); },
+  "mode": b => { const k = b.dataset.mode; state.defaults.modes[k] = !state.defaults.modes[k]; state.savedDefaults = clone(state.defaults); state.form.moreDefaults = true; renderProfile(); toast("Preferences saved", "Applies to new journeys."); },
   "save-defaults": () => { state.savedDefaults = clone(state.defaults); renderAll(); toast("Preferences saved", "Saved to your account. Applies to new journeys."); },
-  "reset-defaults": () => { state.defaults = clone(DEFAULTS); renderAll(); },
+  "reset-defaults": () => { state.defaults = clone(DEFAULTS); state.savedDefaults = clone(DEFAULTS); renderAll(); toast("Reset to defaults", "Applies to new journeys."); },
   "quick-save": () => {
     const from = $("#q-from").value.trim(), to = $("#q-to").value.trim();
     if (!from || !to) { $("#q-error").textContent = "Add where you start and where you're going."; return; }
@@ -1170,7 +1168,7 @@ document.addEventListener("input", e => {
   const si = e.target.closest("[data-s]");
   if (si && state.search) { state.search[si.dataset.s] = si.value; filterSaved(); return; }
   const s = e.target.closest("[data-slider]");
-  if (s) { state.defaults[s.dataset.slider] = +s.value; s.closest(".pref-card").querySelector("output").value = s.value; const btn = $('[data-act="save-defaults"]'); if (btn) { btn.disabled = !dirty(); btn.classList.toggle("saved", !dirty()); btn.innerHTML = dirty() ? "Save preferences" : `${ICON.check} Saved`; } renderToday(); return; }
+  if (s) { state.defaults[s.dataset.slider] = +s.value; s.closest(".prow").querySelector("output").value = s.value; state.savedDefaults = clone(state.defaults); clearTimeout(window.__psave); window.__psave = setTimeout(() => toast("Preferences saved", "Applies to new journeys."), 700); renderToday(); return; }
   const f = e.target.closest("[data-f]");
   if (f) {
     const k = f.dataset.f;

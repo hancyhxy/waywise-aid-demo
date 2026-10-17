@@ -672,3 +672,14 @@ body.export .demo-notes { display:none; }
 .summary-card.live { border:2px solid var(--green); background:#f6fbf7; }
 .switch-diff { display:flex; gap:8px; align-items:flex-start; margin:12px 2px 0; color:#41454b; font-size:12.5px; line-height:1.45; }
 .switch-diff svg { width:14px; height:14px; margin-top:1px; color:var(--accent); flex:none; }
+/* Profile: compact auto-saving preference rows */
+.pref-group { margin-top:10px; padding:2px 15px; border:1px solid var(--line); border-radius:14px; background:#fff; }
+.prow { padding:12px 0 10px; }
+.prow + .prow { border-top:1px solid var(--line-2); }
+.prow-top { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+.prow-top strong { display:block; font-size:14px; }
+.prow-top small { display:block; margin-top:1px; color:var(--muted); font-size:11.5px; line-height:1.35; }
+.prow-top output { flex:none; min-width:28px; height:28px; display:grid; place-items:center; border-radius:8px; background:var(--accent-soft); color:var(--accent-ink); font-weight:750; font-size:13px; }
+.prow input[type=range] { width:100%; margin:8px 0 0; accent-color:var(--accent); }
+.more-defaults .pref-group { margin-top:4px; }
+#defaults > .btn.link { margin-top:10px; }
