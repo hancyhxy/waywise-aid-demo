@@ -850,8 +850,7 @@ const SHEETS = {
   scenarios() {
     return `<p class="overline">DEMO CONTROLS · FICTIONAL DATA</p><h3>Switch scenario</h3>
       <div class="scenario-options">${[["newuser", "0 · First-time user"], ["capacity", "1 · Comfortable journey home"], ["disruption", "2 · Getting to work on time"], ["normal", "3 · Disruption on the way home"]]
-        .map(([k, l]) => `<button class="scenario${state.scenario === k ? " active" : ""}" data-scenario="${k}">${l}</button>`).join("")}</div>
-      <button class="btn ghost full" data-act="close-sheet">Done</button>`;
+        .map(([k, l]) => `<button class="scenario${state.scenario === k ? " active" : ""}" data-scenario="${k}">${l}</button>`).join("")}</div>`;
   },
   form(mode) { return journeyForm(mode); }
 };
