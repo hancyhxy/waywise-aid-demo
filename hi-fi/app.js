@@ -107,6 +107,10 @@ const legSched = (j, dir) => { const d = legDays(j, dir), t = legTime(j, dir); r
 
 /* Alex's saved preferences (persona: wants a seat home, needs predictable arrivals). */
 const SEED_PREFS = ["seat", "reliable"];
+/* How much each usual preference matters (1–10), set in Profile (review 08: keep the sliders and visible values).
+   Starting values carry over from the mid-fi Priorities page: arrival 8, seat 6, reliability 9, walking 5, transfers 5. */
+const SEED_LEVELS = { sooner: 8, seat: 6, walk: 5, transfer: 5, reliable: 9, wait: 5 };
+const lv = k => (state.prefLevel[k] || 5) / 7;
 
 /* Two layers, like adding a course before putting it in a timetable (R1–R4):
    - Saved journey = WHERE: From / To, optional return and name.
@@ -185,7 +189,7 @@ function generic(from, to, clock) {
 const DEFAULTS = { time: 9, seat: 5, crowd: 5, reliability: 9, walk: 5, transfer: 5, wait: 5, modes: { train: true, metro: true, bus: true, ferry: true, lightrail: true } };
 const state = {
   scenario: "disruption", journeys: clone(SEED_JOURNEYS), leg: "work:out", day: "wed", clock: "17:45",
-  prefs: new Set(SEED_PREFS), prefDefault: new Set(SEED_PREFS), showMore: false, selected: null, phase: "options", stage: 0, tab: "today", overlay: null,
+  prefs: new Set(SEED_PREFS), prefDefault: new Set(SEED_PREFS), prefLevel: { ...SEED_LEVELS }, showMore: false, selected: null, phase: "options", stage: 0, tab: "today", overlay: null,
   jview: "list", schedDay: "wed", occ: clone(SEED_OCC), noCommute: new Set(),
   defaults: clone(DEFAULTS), savedDefaults: clone(DEFAULTS), alertsOn: true, sharing: null, reports: [],
   today: null, reminder: null, locPerm: null, learn: true, actionable: true, sheet: null, form: {}
@@ -247,12 +251,13 @@ function score(o, d) {
   const late = lateBy(o, d), wait = platformWait(o), p = state.prefs;
   let v = 100 - etaMin(o, d) * 1.15 * w.time + o.reliability * 0.28 * w.rel + o.seat * 2 * w.seat - o.walk * 0.6 * w.walk
     - o.transfers * 8 * w.transfer - o.crowd * 6 * w.crowd - late * 4 * w.time - wait * 0.5 * w.wait;
-  if (p.has("sooner")) v -= etaMin(o, d) * 2 + late * 4;
-  if (p.has("seat")) v += o.seat * 12 - o.crowd * 4 - (o.seat <= 1 ? 24 : 0);
-  if (p.has("walk")) v -= o.walk * 2.7;
-  if (p.has("transfer")) v -= o.transfers * 20;
-  if (p.has("reliable")) v += (o.reliability - 70) * 0.9;
-  if (p.has("wait")) v -= wait * 3;
+  /* Each chosen preference counts in proportion to how much it matters (Profile, 1–10). */
+  if (p.has("sooner")) v -= (etaMin(o, d) * 2 + late * 4) * lv("sooner");
+  if (p.has("seat")) v += (o.seat * 12 - o.crowd * 4 - (o.seat <= 1 ? 24 : 0)) * lv("seat");
+  if (p.has("walk")) v -= o.walk * 2.7 * lv("walk");
+  if (p.has("transfer")) v -= o.transfers * 20 * lv("transfer");
+  if (p.has("reliable")) v += (o.reliability - 70) * 0.9 * lv("reliable");
+  if (p.has("wait")) v -= wait * 3 * lv("wait");
   if (modeAvoided(o)) v -= 60;
   return v;
 }
@@ -605,14 +610,18 @@ const MODES = [["train", "Train"], ["metro", "Metro"], ["bus", "Bus"], ["ferry",
 /* Profile = one page: account status, default travel preferences, alerts. Saved journeys stay in their own tab. */
 function renderProfile() {
   const el = $("#screen-profile"), n = state.journeys.length;
-  const row = p => { const on = state.prefDefault.has(p.id); return `<button class="pref-row${on ? " on" : ""}" data-act="pref-def" data-pref="${p.id}" role="checkbox" aria-checked="${on}"><i>${on ? ICON.check : ""}</i><span>${p.label}</span></button>`; };
+  const row = p => {
+    const on = state.prefDefault.has(p.id), l = state.prefLevel[p.id];
+    return `<div class="pref-item${on ? " on" : ""}"><button class="pref-row${on ? " on" : ""}" data-act="pref-def" data-pref="${p.id}" role="checkbox" aria-checked="${on}"><i>${on ? ICON.check : ""}</i><span>${p.label}</span>${on ? `<output id="lvl-${p.id}">${l}</output>` : ""}</button>
+      ${on ? `<div class="pref-level"><input type="range" min="1" max="10" step="1" value="${l}" data-level="${p.id}" aria-label="How much ${p.label} matters, 1 to 10"><div class="scale"><span>1 · Less important</span><span>10 · More important</span></div></div>` : ""}</div>`;
+  };
   const toggle = (k, t, sub) => `<div class="toggle-card"><span><span><strong>${t}</strong><small>${sub}</small></span></span><button class="toggle${state[k] ? " active" : ""}" data-act="toggle" data-key="${k}" aria-pressed="${state[k]}" aria-label="${t}"><i></i></button></div>`;
   el.innerHTML = `
     <header class="app-header"><div><p class="overline">PROFILE &amp; ACCOUNT</p><h2>Alex</h2></div><span class="avatar big">AL</span></header>
     <article class="account-card"><div class="acc-row">${ICON.cloud}<div><strong>Saved to your account</strong><small>alex.commuter@email.com<br>${n ? `${n} saved journey${n > 1 ? "s" : ""}, your schedule and preferences sync` : "Your preferences sync"} across your devices.</small></div></div></article>
     <section class="block">
       <div class="sec-head"><p class="overline">USUAL PREFERENCES</p><span class="saved-state">${ICON.check}Saved</span></div>
-      <p class="hint">Used at the start of every journey. Changes on Today apply to that journey only, unless you save them to your usual preferences.</p>
+      <p class="hint">Tick what matters, then set how much (1–10). These start every journey; changes on Today apply to that journey only, unless you save them to your usual preferences.</p>
       <article class="pref-group"><div class="pref-list">${[...PREFS, MORE_PREFS[0]].map(row).join("")}</div></article>
       <div class="pref-card"><strong>Transport modes</strong><small>Turn off modes you'd rather not use. We'll explain if no route avoids them.</small>
         <div class="mode-chips">${MODES.map(([k, l]) => `<button class="chip${state.defaults.modes[k] ? " active" : ""}" data-act="mode" data-mode="${k}" role="checkbox" aria-checked="${state.defaults.modes[k]}"><i>${state.defaults.modes[k] ? ICON.check : ""}</i>${l}</button>`).join("")}</div>
@@ -659,7 +668,7 @@ function legsTimeline(o, d) {
 function whyDetails(o, d) {
   const conf = conflicts(o, d), c = certainty(d.confidence), p = [...state.prefs];
   return `<details class="why-details"><summary>Why this route?</summary>
-    <p class="sheet-lede">${p.length ? `Ranked with your preferences (<b>${p.map(prefLabel).join(", ")}</b>). ` : ""}${esc(reason(o, d))}</p>
+    <p class="sheet-lede">${p.length ? `Ranked with your preferences (<b>${p.map(k => SEED_LEVELS[k] ? `${prefLabel(k)} ${state.prefLevel[k]}/10` : prefLabel(k)).join(", ")}</b>). ` : ""}${esc(reason(o, d))}</p>
     ${conf.map(x => `<p class="conflict">${ICON.warn}<span>${esc(x)}</span></p>`).join("")}
     <div class="why-block"><strong>The trade-off</strong><p>${esc(tradeoff(o, d))}</p></div>
     <div class="why-block"><strong>How reliable is this estimate?</strong>
@@ -793,7 +802,7 @@ const SHEETS = {
   method() {
     return `<p class="overline">HOW RECOMMENDATIONS WORK</p><h3>Useful detail, not a black box</h3>
       <div class="method-item"><span>1</span><div><strong>Current conditions</strong><p>Delays, frequency, crowding and when the data was last updated. Operator updates are labelled separately from Waywise predictions.</p></div></div>
-      <div class="method-item"><span>2</span><div><strong>Your preferences</strong><p>Your usual preferences start every journey. Changes on Today apply to that journey only, unless you save them to your usual preferences.</p></div></div>
+      <div class="method-item"><span>2</span><div><strong>Your preferences</strong><p>Your usual preferences start every journey, and each counts as much as you set it in Profile (1–10). Changes on Today apply to that journey only, unless you save them to your usual preferences.</p></div></div>
       <div class="method-item"><span>3</span><div><strong>Arrival estimate confidence</strong><p>How closely arrival times and crowding are likely to match what's shown.</p></div></div>
       <button class="btn ghost full" data-act="close-sheet">Done</button>`;
   },
@@ -1042,7 +1051,7 @@ function setScenario(id) {
   id = SCN_ALIAS[id] || id;
   if (id !== "newuser" && !S[id]) return;
   state.scenario = id; resetJourneyState();
-  state.occ = clone(SEED_OCC); state.noCommute = new Set(); state.form = {}; state.prefDefault = id === "newuser" ? new Set() : new Set(SEED_PREFS); state.prefs = new Set(state.prefDefault);
+  state.occ = clone(SEED_OCC); state.noCommute = new Set(); state.form = {}; state.prefDefault = id === "newuser" ? new Set() : new Set(SEED_PREFS); state.prefs = new Set(state.prefDefault); state.prefLevel = { ...SEED_LEVELS };
   if (id === "newuser") { state.journeys = []; state.leg = null; state.day = "tue"; state.clock = "08:40"; state.schedDay = "tue"; }
   else { const s = S[id]; state.journeys = clone(SEED_JOURNEYS); state.day = s.day; state.leg = scheduledToday(s.day).some(l => l.key === s.leg && !l.skip) ? s.leg : null; state.suggested = state.leg; state.clock = s.clock; state.schedDay = s.day; }
   $$(".demo-notes .scenario").forEach(b => b.classList.toggle("active", b.dataset.scenario === id));
@@ -1152,7 +1161,7 @@ const A = {
   "toggle-nocommute": () => { const d = state.schedDay; state.noCommute.has(d) ? state.noCommute.delete(d) : state.noCommute.add(d); syncSuggestion(); renderAll(); },
   "mode": b => { const k = b.dataset.mode; state.defaults.modes[k] = !state.defaults.modes[k]; state.savedDefaults = clone(state.defaults); renderProfile(); renderToday(); },
   "save-defaults": () => { state.savedDefaults = clone(state.defaults); renderAll(); toast("Preferences saved", "Saved to your account. Applies to new journeys."); },
-  "reset-defaults": () => { state.prefs = new Set(); state.prefDefault = new Set(); state.defaults = clone(DEFAULTS); state.savedDefaults = clone(DEFAULTS); renderAll(); toast("Preferences reset"); },
+  "reset-defaults": () => { state.prefs = new Set(); state.prefDefault = new Set(); state.prefLevel = { ...SEED_LEVELS }; state.defaults = clone(DEFAULTS); state.savedDefaults = clone(DEFAULTS); renderAll(); toast("Preferences reset"); },
   "quick-save": () => {
     const from = $("#q-from").value.trim(), to = $("#q-to").value.trim();
     if (!from || !to) { $("#q-error").textContent = "Add where you start and where you're going."; return; }
@@ -1265,6 +1274,8 @@ document.addEventListener("click", e => {
   if (fn) { e.preventDefault(); fn(a, e); }
 });
 document.addEventListener("input", e => {
+  const lvIn = e.target.closest("[data-level]");
+  if (lvIn) { state.prefLevel[lvIn.dataset.level] = +lvIn.value; const o = $(`#lvl-${lvIn.dataset.level}`); if (o) o.textContent = lvIn.value; return; }
   const si = e.target.closest("[data-s]");
   if (si && state.search) { state.search[si.dataset.s] = si.value; filterSaved(); return; }
   const f = e.target.closest("[data-f]");
@@ -1275,6 +1286,10 @@ document.addEventListener("input", e => {
     if (k === "hasRet") { if (f.checked) { state.form.retFrom = state.form.retFrom || state.form.to; state.form.retTo = state.form.retTo || state.form.from; } refreshSheet(); return; }
     if (k === "from" || k === "to") { const n = $("#auto-name"); if (n) n.textContent = state.form.from && state.form.to ? `${state.form.from} → ${state.form.to}` : "From → To"; }
   }
+});
+document.addEventListener("change", e => {
+  const lvIn = e.target.closest("[data-level]");
+  if (lvIn) { renderToday(); renderMini(); toast("Saved", `${prefLabel(lvIn.dataset.level)}: ${lvIn.value}/10. Saved to your account.`); }
 });
 document.addEventListener("keydown", e => {
   if (e.key === "Escape") { closeSheet(); closeSearch(); }

@@ -819,3 +819,11 @@ button.conf-row { display:block; width:calc(100% - 4px); padding:0; border:0; ba
 .tradeoff-banner { border-color:#ecd59c; background:var(--amber-soft); }
 /* Sharing banner: who on line 1, how long on line 2 */
 .share-banner span small { display:block; margin-top:1px; font-weight:500; opacity:.85; }
+/* v4.10: usual preferences keep a 1–10 level (review 08) */
+.pref-item + .pref-item .pref-row { border-top:0; }
+.pref-item .pref-row { width:100%; }
+.pref-item.on .pref-row { border-bottom:0; padding-bottom:4px; }
+.pref-row output { margin-left:auto; min-width:28px; height:26px; display:grid; place-items:center; border-radius:8px; background:var(--accent-soft); color:var(--accent-ink); font-size:13px; font-weight:750; }
+.pref-level { padding:0 4px 12px 38px; border-bottom:1px solid var(--line-2); }
+.pref-level input[type=range] { width:100%; margin:4px 0 2px; accent-color:var(--accent); }
+.pref-level .scale { display:flex; justify-content:space-between; color:var(--faint); font-size:10.5px; }
