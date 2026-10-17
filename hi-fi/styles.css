@@ -827,3 +827,9 @@ button.conf-row { display:block; width:calc(100% - 4px); padding:0; border:0; ba
 .pref-level { padding:0 4px 12px 38px; border-bottom:1px solid var(--line-2); }
 .pref-level input[type=range] { width:100%; margin:4px 0 2px; accent-color:var(--accent); }
 .pref-level .scale { display:flex; justify-content:space-between; color:var(--faint); font-size:10.5px; }
+
+/* v4.11: keep leg chain on one line; toast clears drawer controls */
+.leg-chain { flex-wrap:nowrap; gap:4px; }
+.leg-chain .lc-sep { margin:0 -1px; }
+.rc-status .st { white-space:nowrap; }
+.toast { right:64px; }

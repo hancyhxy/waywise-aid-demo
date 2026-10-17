@@ -80,6 +80,7 @@ const MORE_PREFS = [
   { id: "nobus", label: "Avoid buses" },
   { id: "nometro", label: "Avoid Metro" }
 ];
+const SHORT = { sooner: "Sooner", seat: "Seat", walk: "Less walking", transfer: "No transfers", reliable: "Predictable", wait: "Less waiting", nobus: "No buses", nometro: "No Metro" };
 const prefLabel = id => [...PREFS, ...MORE_PREFS].find(p => p.id === id)?.label || id;
 const DAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 const DAY_NAME = { mon: "Monday", tue: "Tuesday", wed: "Wednesday", thu: "Thursday", fri: "Friday", sat: "Saturday", sun: "Sunday" };
@@ -391,7 +392,7 @@ function renderToday() {
   const leave = fmt(Math.min(...d.options.map(o => toMin(o.leaveBy))));
   const np = state.prefs.size;
 
-  const plist = [...PREFS, ...MORE_PREFS].filter(x => state.prefs.has(x.id)).map(x => x.label);
+  const plist = [...PREFS, ...MORE_PREFS].filter(x => state.prefs.has(x.id)).map(x => SHORT[x.id] || x.label);
   const prefBar = np
     ? `<div class="rank-row">${tempPrefs() ? `<span class="rank-cap temp">This journey</span>` : `<span class="rank-cap">Your preferences</span>`}<button class="fchip on" data-act="prefs"><span class="fc-l">${esc(plist.slice(0, 2).join(", "))}</span>${np > 2 ? `<span>+${np - 2}</span>` : ""}<b class="chev">▾</b></button></div>`
     : `<div class="rank-row">${tempPrefs() ? `<span class="rank-cap temp">This journey</span>` : `<span class="rank-cap">Your preferences</span>`}<button class="fchip" data-act="prefs">Set what matters<b class="chev">▾</b></button></div>`;
@@ -421,7 +422,7 @@ function renderToday() {
         <div><span class="source">${esc(d.alert.source)}</span><strong>${esc(d.alert.title)}</strong><p>${esc(d.alert.copy)}</p><small>Updated ${d.alert.updated} · next update ${d.alert.next}</small></div>
       </div>`}
       ${lateBy(rec, d) && state.prefs.has("seat") ? `<div class="tradeoff-banner"><b>Trade-off:</b> ${esc(lcT(rec.title))} is more comfortable but arrives <b>${lateBy(rec, d)} min after</b> your ${d.target} ${d.targetLabel}.<button class="btn link sm" data-act="prefer-ontime">Prioritise on-time arrival</button></div>`  : seatLate ? `<div class="tradeoff-banner"><b>Trade-off:</b> ${esc(seatLate.title)} has a better seat chance but arrives <b>${lateBy(seatLate, d)} min after</b> your ${d.target} ${d.targetLabel}, so the ${esc(lcT(rec.title))} is recommended.</div>` : ""}
-      <div class="route-options">${d.options.map(o => routeCard(o, d, rec)).join("")}</div>
+      <div class="route-options">${[rec, ...d.options.filter(o => o.id !== rec.id)].map(o => routeCard(o, d, rec)).join("")}</div>
     </section>
     <p class="data-note">Arrival times, crowding and seat chances are estimates, not guarantees. Always follow official transport advice.</p>`;
 }
@@ -492,7 +493,8 @@ const ACTION_PHRASE = { take: "take this train", wait: "wait for this one", swit
 const actionPhrase = o => (o.mode === "bus" ? "take the bus" : ACTION_PHRASE[o.kind] || "take this one");
 function routeCard(o, d, rec) {
   const isRec = o.id === rec.id, live = state.phase === "active" && o.id === state.selected, late = lateBy(o, d), p = state.prefs;
-  const conf = conflicts(o, d).filter(c => !c.startsWith("Arrives"));
+  let conf = conflicts(o, d).filter(c => !c.startsWith("Arrives"));
+  if (isRec && hardDeadline(d) && !lateBy(o, d) && d.options.some(x => lateBy(x, d))) conf = conf.map(c => c.startsWith("Seat unlikely") ? "Seat unlikely — your shift start comes first" : c);
   const kind = { take: ICON.go, wait: ICON.clock, switch: ICON.swap, bus: ICON.swap }[o.kind] || ICON.go;
   const strip = live ? `<div class="rec-strip live-strip"><span class="pulse"></span>In progress · ${STAGES[state.stage]}</div>`
     : isRec ? `<div class="rec-strip">${ICON.sparkle}<span><b>Recommended · ${actionPhrase(o)}</b> — ${reasonShort(o, d)}</span></div>` : "";
