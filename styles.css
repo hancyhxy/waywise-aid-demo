@@ -95,7 +95,44 @@ b,strong { font-weight:650; }
 .leg small { color:var(--muted); font-weight:500; }
 .leg.active { border-color:var(--accent); background:var(--accent-soft); color:var(--accent-ink); }
 .leg.add { color:var(--accent); border-style:dashed; }
-.alert-card { display:flex; gap:11px; margin-top:14px; padding:13px 14px; border:1px solid var(--line); border-radius:var(--radius); background:#fff; }
+/* flight-search style journey card + saved presets */
+.suggest { display:flex; align-items:center; gap:6px; min-height:22px; margin:-4px 2px 8px; color:var(--accent-ink); font-size:12.5px; font-weight:650; }
+.suggest svg { width:14px; height:14px; color:var(--green); stroke-width:2.6; }
+.suggest.today { color:var(--amber-ink); }
+.suggest span { flex:1; }
+.suggest .btn { padding:0; }
+.suggest.muted { color:var(--muted); }
+.od-field strong.ph { color:var(--faint); font-weight:600; }
+.search-card { border:1px solid var(--line); border-radius:18px; background:#fff; box-shadow:0 2px 10px rgba(20,24,30,.05); overflow:hidden; }
+.od { position:relative; }
+.od-field { width:100%; display:flex; align-items:center; gap:12px; padding:11px 64px 11px 16px; border:0; background:none; text-align:left; }
+.od-field+.od-field { border-top:1px solid var(--line-2); }
+.od-field:active,.when button:active { background:var(--paper); }
+.od-field span { min-width:0; }
+.od-field small,.when small { display:block; color:var(--muted); font-size:11px; font-weight:650; letter-spacing:.05em; text-transform:uppercase; }
+.od-field strong { display:block; margin-top:1px; font-size:17px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.od-dot { flex:none; width:12px; height:12px; border-radius:50%; border:2.5px solid var(--accent); background:#fff; }
+.od-dot.to { background:var(--accent); }
+.od-line { position:absolute; left:21px; top:36px; height:30px; border-left:2px dotted #b9c2d6; pointer-events:none; }
+.swap-fab { position:absolute; right:14px; top:50%; width:40px; height:40px; margin-top:-20px; display:grid; place-items:center; border:1px solid var(--line); border-radius:50%; background:#fff; color:var(--accent); box-shadow:0 2px 8px rgba(20,24,30,.1); transition:transform .25s; }
+.swap-fab svg { width:18px; height:18px; transform:rotate(90deg); }
+.swap-fab:active { transform:rotate(180deg); }
+.when { display:grid; grid-template-columns:1fr 1fr; border-top:1px solid var(--line-2); }
+.when button { padding:10px 16px; border:0; background:none; text-align:left; }
+.when button+button { border-left:1px solid var(--line-2); }
+.when strong { display:block; margin-top:1px; font-size:15px; }
+.presets-head { display:flex; align-items:center; justify-content:space-between; margin:16px 2px 6px; }
+.presets-head .btn { padding:0; }
+.leg-picker { margin-top:0; padding-bottom:4px; scroll-snap-type:x proximity; scroll-padding:0 18px; }
+.preset { flex:none; scroll-snap-align:start; width:178px; display:grid; gap:3px; padding:10px 12px; border:1px solid var(--line); border-radius:14px; background:#fff; text-align:left; }
+.preset .p-top { display:flex; justify-content:space-between; gap:6px; align-items:baseline; }
+.preset b { font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.preset em { flex:none; color:var(--muted); font-size:11.5px; font-style:normal; font-weight:650; }
+.preset .p-route { color:var(--muted); font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.preset.active { border:2px solid var(--accent); padding:9px 11px; background:var(--accent-soft); }
+.preset.active b,.preset.active em { color:var(--accent-ink); }
+.preset.add { width:auto; display:flex; align-items:center; gap:6px; color:var(--accent); border-style:dashed; font-size:13px; font-weight:650; }
+.alert-card { display:flex; gap:11px; margin-top:12px; padding:13px 14px; border:1px solid var(--line); border-radius:var(--radius); background:#fff; }
 .alert-icon { flex:none; width:28px; height:28px; display:grid; place-items:center; border-radius:9px; background:var(--red); color:#fff; font-weight:800; }
 .alert-card.amber .alert-icon { background:var(--amber); }
 .alert-card.green .alert-icon { background:var(--green); }

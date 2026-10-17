@@ -115,7 +115,7 @@ function generic(from, to, clock) {
   if (genericCache[key]) return genericCache[key];
   const c = toMin(clock);
   const d = {
-    generic: true, leg: null, overline: `${DAY_NAME[state.day].toUpperCase()} · SAVED JOURNEY`, greeting: c < 720 ? "Morning, Alex" : "Evening, Alex",
+    generic: true, leg: null, overline: `${DAY_NAME[state.day].toUpperCase()} · ${state.clock}`, greeting: greet(state.clock),
     target: null, targetLabel: "",
     alert: { tone: "green", source: "Operator update", title: "Services running normally", copy: `No reported disruption between ${from} and ${to}.`, updated: "just now", next: fmt(c + 10) },
     confidence: 88, why: "Services are running to timetable and recent data is complete.",
@@ -154,12 +154,14 @@ function allLegs() {
   return legs;
 }
 function current() {
-  const L = legInfo(state.leg);
+  let L = legInfo(state.leg);
+  if (!L && state.today?.from && state.today?.to) L = { key: null, j: { id: null, name: "", ret: null }, dir: "out", from: state.today.from, to: state.today.to, time: "" };
   if (!L) return null;
   const from = state.today?.from || L.from, to = state.today?.to || L.to;
   const sid = LEG_SCN[state.leg];
   const routeChanged = from !== L.from || to !== L.to;
-  const base = sid && !routeChanged ? S[sid] : generic(from, to, state.today?.time || L.time || state.clock);
+  const usual = L.time && toMin(L.time) > toMin(state.clock) ? fmt(toMin(L.time)) : state.clock;
+  const base = sid && !routeChanged && S[sid].day === state.day ? S[sid] : generic(from, to, state.today?.time ? fmt(toMin(state.today.time)) : usual);
   const target = state.today?.arriveBy || base.target;
   return { ...base, from, to, L, target, targetLabel: state.today?.arriveBy ? "arrive-by time" : base.targetLabel };
 }
@@ -276,14 +278,14 @@ function prefChip(p) {
 function renderToday() {
   const el = $("#screen-today"), d = current();
   $("#clock").textContent = state.clock;
-  if (!d) { el.innerHTML = renderFirstRun(); return; }
+  if (!d) { el.innerHTML = state.journeys.length ? renderNoRoute() : renderFirstRun(); scrollPresets(); return; }
   const rank = ranked(d), rec = rank[0];
   const L = d.L, ret = L.dir === "out" ? (L.j.ret ? `${L.j.id}:ret` : null) : `${L.j.id}:out`;
   const sched = scheduledToday(state.day).find(x => x.key === state.leg && !x.skip);
-  const suggestion = state.today ? `<span class="tag today">Changed for today only</span>`
-    : sched ? `<span class="tag">Suggested · your usual ${DAY_NAME[state.day]} journey${sched.time ? `, ${fmt(toMin(sched.time))}` : ""}</span>`
-      : `<span class="tag">Saved journey</span>`;
-  const legs = allLegs().sort((a, b) => (b.key === state.leg) - (a.key === state.leg));
+  const suggestion = state.today ? `<p class="suggest today"><span>${L.key ? "Changed for today only" : "Route for today only"}</span>${L.key ? `<button class="btn link sm" data-act="f-clear-today">Back to saved journey</button>` : ""}</p>`
+    : sched && state.leg === state.suggested ? `<p class="suggest">${ICON.check}<span>Suggested · usual ${DAY_NAME[state.day].slice(0, 3)}${sched.time ? ` ${fmt(toMin(sched.time))}` : ""}</span><button class="btn link sm" data-act="not-now">Not now</button></p>`
+      : `<p class="suggest"><span>Saved journey${L.j.name ? ` · ${esc(L.j.name)}` : ""}</span></p>`;
+  const legs = allLegs();
   const active = state.phase === "active" ? selectedOption(d) : null;
   const sharing = state.sharing && state.sharing.live ? `<div class="share-banner">${ICON.share}<span>Sharing arrival updates with <b>${esc(state.sharing.to)}</b> · ${esc(state.sharing.until)}</span><button class="btn link sm" data-act="stop-share">Stop</button></div>` : "";
 
@@ -294,22 +296,20 @@ function renderToday() {
     </header>
     ${active ? `<button class="active-banner" data-act="open-active"><span class="pulse"></span><span><b>Journey active</b> · ${esc(active.title)} · arrives ${active.arrives}</span><span aria-hidden="true">›</span></button>` : ""}
     ${sharing}
-    <article class="trip-card">
-      ${suggestion}
-      <div class="trip-row">
-        <div><span class="place">${esc(d.from)}</span><span class="time">Leave from ${state.today?.time ? fmt(toMin(state.today.time)) : state.clock}</span></div>
-        <div class="journey-line" aria-hidden="true"><i></i>→<i></i></div>
-        <div class="align-right"><span class="place">${esc(d.to)}</span><span class="time">${d.target ? `${d.targetLabel === "shift start" ? "Shift starts" : "Arrive by"} ${d.target}` : "No arrival time set"}</span></div>
+    ${suggestion}
+    <article class="search-card" aria-label="Journey for today">
+      <div class="od">
+        <button class="od-field" data-act="edit-today" aria-label="Change start for today"><i class="od-dot from"></i><span><small>From</small><strong>${esc(d.from)}</strong></span></button>
+        <button class="od-field" data-act="edit-today" aria-label="Change destination for today"><i class="od-dot to"></i><span><small>To</small><strong>${esc(d.to)}</strong></span></button>
+        <i class="od-line" aria-hidden="true"></i>
+        <button class="swap-fab" data-act="swap-dir" aria-label="${ret ? "Switch to the return trip" : "Swap From and To for today"}">${ICON.swap}</button>
       </div>
-      <div class="trip-actions">
-        <button class="btn link sm" data-act="edit-today">Change for today</button>
-        ${ret ? `<button class="btn link sm" data-act="use-leg" data-leg="${ret}">${ICON.swap} Return trip</button>` : ""}
+      <div class="when">
+        <button data-act="edit-today"><small>Leave</small><strong>Today · ${d.options[0] ? fmt(Math.min(...d.options.map(o => toMin(o.leaveBy)))) : state.clock}</strong></button>
+        <button data-act="edit-today"><small>${d.targetLabel === "shift start" ? "Shift starts" : "Arrive by"}</small><strong>${d.target || "Any time"}</strong></button>
       </div>
     </article>
-    <div class="leg-picker" role="group" aria-label="Your saved journeys">
-      ${legs.map(l => `<button class="leg${l.key === state.leg ? " active" : ""}" data-act="use-leg" data-leg="${l.key}">${esc(l.from)} → ${esc(l.to)}${l.time ? `<small>${fmt(toMin(l.time))}</small>` : ""}</button>`).join("")}
-      <button class="leg add" data-act="add-journey">${ICON.plus} Add journey</button>
-    </div>
+    ${presetsHtml()}
 
     <div class="alert-card ${d.alert.tone}" role="status">
       <div class="alert-icon">${d.alert.tone === "green" ? ICON.check : "!"}</div>
@@ -343,6 +343,42 @@ function renderToday() {
       <div class="route-options">${d.options.map(o => routeCard(o, d, rec)).join("")}</div>
     </section>
     <p class="data-note">Arrival times, crowding and seat chances are estimates, not guarantees. Always follow official transport advice.</p>`;
+  scrollPresets();
+}
+function presetsHtml() {
+  return `<div class="presets-head"><p class="overline">SAVED JOURNEYS</p><button class="btn link sm" data-act="tab" data-tab="journeys">See all</button></div>
+    <div class="leg-picker" role="group" aria-label="Saved journeys">
+      ${allLegs().map(l => `<button class="preset${l.key === state.leg && !state.today ? " active" : ""}" data-act="use-leg" data-leg="${l.key}">
+        <span class="p-top"><b>${esc(l.j.name || "Saved route")}${l.dir === "ret" ? " · return" : ""}</b>${l.time ? `<em>${fmt(toMin(l.time))}</em>` : ""}</span>
+        <span class="p-route">${esc(l.from)} → ${esc(l.to)}</span></button>`).join("")}
+      <button class="preset add" data-act="add-journey">${ICON.plus}<span>Add journey</span></button>
+    </div>`;
+}
+const greet = c => (toMin(c) < 720 ? "Morning, Alex" : toMin(c) < 1020 ? "Afternoon, Alex" : "Evening, Alex");
+function renderNoRoute() {
+  return `
+    <header class="app-header">
+      <div><p class="overline">${DAY_NAME[state.day].toUpperCase()} · ${state.clock}</p><h2>${greet(state.clock)}</h2></div>
+      <button class="avatar" data-act="tab" data-tab="profile" aria-label="Open Profile and account">AL</button>
+    </header>
+    <p class="suggest muted"><span>No journey suggested right now</span></p>
+    <article class="search-card empty" aria-label="Journey for today">
+      <div class="od">
+        <button class="od-field" data-act="edit-today"><i class="od-dot from"></i><span><small>From</small><strong class="ph">Where from?</strong></span></button>
+        <button class="od-field" data-act="edit-today"><i class="od-dot to"></i><span><small>To</small><strong class="ph">Where to?</strong></span></button>
+        <i class="od-line" aria-hidden="true"></i>
+      </div>
+      <div class="when">
+        <button data-act="edit-today"><small>Leave</small><strong>Today · ${state.clock}</strong></button>
+        <button data-act="edit-today"><small>Arrive by</small><strong>Any time</strong></button>
+      </div>
+    </article>
+    ${presetsHtml()}
+    <p class="data-note">Pick a saved journey or enter a route to see your options and current service conditions.</p>`;
+}
+function scrollPresets() {
+  const row = $("#screen-today .leg-picker"), act = row && row.querySelector(".preset.active");
+  if (row) row.scrollLeft = act ? Math.max(0, row.scrollLeft + act.getBoundingClientRect().left - row.getBoundingClientRect().left - 18) : 0;
 }
 function routeCard(o, d, rec) {
   const isRec = o.id === rec.id, chosen = o.id === state.selected, late = lateBy(o, d), p = state.prefs;
@@ -791,7 +827,7 @@ function renderAll() {
   if (state.overlay === "details") renderDetails();
   if (state.overlay === "active") renderActive();
 }
-function setTab(tab) { state.tab = tab; state.overlay = null; show(); $(`#screen-${tab}`).scrollTop = 0; }
+function setTab(tab) { state.tab = tab; state.overlay = null; show(); $(`#screen-${tab}`).scrollTop = 0; scrollPresets(); }
 function openOverlay(name) { state.overlay = name; show(); $(`#screen-${name}`).scrollTop = 0; }
 
 function resetJourneyState() { state.prefs = new Set(); state.selected = null; state.phase = "options"; state.stage = 0; state.today = null; state.sharing = null; state.reports = []; state.overlay = null; }
@@ -800,8 +836,6 @@ function useLeg(key) {
   const changed = key !== state.leg;
   state.leg = key; resetJourneyState();
   const L = legInfo(key);
-  if (!LEG_SCN[key] && L.time) state.clock = fmt(toMin(L.time));
-  else if (LEG_SCN[key]) state.clock = S[LEG_SCN[key]].clock;
   setTab("today");
   if (changed) toast(`${L.from} → ${L.to}`, "Today's choices were reset for this journey.");
 }
@@ -811,7 +845,7 @@ function setScenario(id) {
   state.scenario = id; resetJourneyState();
   state.occ = {}; state.noCommute = new Set(); state.form = {};
   if (id === "newuser") { state.journeys = []; state.leg = null; state.day = "tue"; state.clock = "08:40"; state.schedDay = "tue"; }
-  else { const s = S[id]; state.journeys = clone(SEED_JOURNEYS); state.leg = s.leg; state.day = s.day; state.clock = s.clock; state.schedDay = s.day; }
+  else { const s = S[id]; state.journeys = clone(SEED_JOURNEYS); state.leg = s.leg; state.suggested = s.leg; state.day = s.day; state.clock = s.clock; state.schedDay = s.day; }
   $$(".demo-notes .scenario").forEach(b => b.classList.toggle("active", b.dataset.scenario === id));
   try { localStorage.setItem("waywise-hifi-scenario", id); } catch (e) { }
   closeSheet(); setTab("today");
@@ -879,6 +913,15 @@ const A = {
   toggle: b => { const k = b.dataset.key; state[k] = !state[k]; renderAll(); },
   scenarios: () => openSheet("scenarios"),
   "use-leg": b => useLeg(b.dataset.leg),
+  "not-now": () => { state.leg = null; resetJourneyState(); renderToday(); },
+  "swap-dir": () => {
+    const d = current(), L = d.L, ret = L.dir === "out" ? (L.j.ret ? `${L.j.id}:ret` : null) : `${L.j.id}:out`;
+    if (ret && !state.today) { useLeg(ret); return; }
+    state.today = { ...(state.today || {}), from: d.to, to: d.from };
+    if (L.key && state.today.from === L.from && state.today.to === L.to && !state.today.time && !state.today.arriveBy) state.today = null;
+    state.selected = null; state.phase = "options"; renderToday();
+    toast("Swapped for today", "Your saved journey is unchanged.");
+  },
   jview: b => { state.jview = b.dataset.view; renderJourneys(); },
   "sched-day": b => { state.schedDay = b.dataset.day; renderJourneys(); },
   skip: b => { const k = `${state.schedDay}|${b.dataset.key}`; state.occ[k] = { ...(state.occ[k] || {}), skip: true }; renderJourneys(); toast("Skipped for this date", `${fullDate(state.schedDay)} only. Your schedule is unchanged.`); },
@@ -903,7 +946,7 @@ const A = {
   },
   "edit-occ": b => { const l = scheduledToday(state.schedDay).find(x => x.key === b.dataset.key); state.form = { key: l.key, time: l.time }; openSheet("form", "edit-occ"); },
   "edit-sched": b => { const j = state.journeys.find(x => x.id === b.dataset.id); state.form = { id: j.id, days: [...j.days], out: j.out }; openSheet("form", "edit-sched"); },
-  "edit-today": () => { const d = current(); state.form = { from: d.from, to: d.to, time: state.today?.time || state.clock, arriveBy: d.target || "", alsoSave: false }; openSheet("form", "edit-today"); },
+  "edit-today": () => { const d = current(); state.form = { from: d?.from || "", to: d?.to || "", time: state.today?.time || state.clock, arriveBy: d?.target || "", alsoSave: false }; openSheet("form", "edit-today"); },
   "f-swap": () => { const f = state.form; [f.from, f.to] = [f.to, f.from]; refreshSheet(); },
   "f-day": b => { const f = state.form; f.days = f.days || []; const d = b.dataset.day; f.days = f.days.includes(d) ? f.days.filter(x => x !== d) : [...f.days, d]; refreshSheet(); },
   "f-clear-days": () => { state.form.days = []; refreshSheet(); },
@@ -939,9 +982,9 @@ const A = {
   "f-save-today": () => {
     const f = state.form;
     if (!f.from?.trim() || !f.to?.trim()) { f.error = "Add where you start and where you're going."; refreshSheet(); return; }
-    const L = legInfo(state.leg);
+    const L = legInfo(state.leg) || {};
     state.today = { from: f.from.trim(), to: f.to.trim(), time: f.time, arriveBy: f.arriveBy ? fmt(toMin(f.arriveBy)) : null };
-    if (state.today.from === L.from && state.today.to === L.to && (!f.time || fmt(toMin(f.time)) === state.clock) && (state.today.arriveBy || null) === (current().target || null) && !f.arriveBy) state.today = null;
+    if (L.from && state.today.from === L.from && state.today.to === L.to && (!f.time || fmt(toMin(f.time)) === state.clock) && (state.today.arriveBy || null) === (current().target || null) && !f.arriveBy) state.today = null;
     state.selected = null; state.phase = "options";
     if (f.alsoSave) state.journeys.push({ id: "j" + Date.now(), from: f.from.trim(), to: f.to.trim(), name: "", out: f.time || "", ret: null, days: [] });
     closeSheet(); renderAll();
