@@ -54,6 +54,7 @@ const SEAT = ["Seat unlikely", "Seat unlikely", "Seat possible", "Seat more like
 const seatTone = s => (s <= 1 ? "warn" : s >= 3 ? "good" : "");
 const relTone = r => (r >= 85 ? "good" : r < 70 ? "warn" : "");
 const certainty = c => (c >= 85 ? "High" : c >= 70 ? "Medium" : "Low");
+const CERT_RANGE = { High: "±2 min", Medium: "±5 min", Low: "±10+ min" };
 const CERTAINTY_COPY = {
   High: "Arrival is usually within 2 minutes of this estimate.",
   Medium: "Arrival could be around 5 minutes different from this estimate.",
@@ -378,7 +379,7 @@ function renderToday() {
     <section class="block results">
       <div class="section-heading">
         <h3>Route options</h3>
-        <button class="conf-pill" data-act="certainty"><i class="c-${certainty(d.confidence).toLowerCase()}"></i>${certainty(d.confidence)} confidence</button>
+        <button class="conf-pill" data-act="certainty" aria-label="How accurate are these arrival times?"><i class="c-${certainty(d.confidence).toLowerCase()}"></i>Arrivals ${CERT_RANGE[certainty(d.confidence)]}</button>
       </div>
       ${prefBar}
       ${np ? `<p class="pref-note">For this journey only · <button class="btn link sm" data-act="save-default">Save as default</button> · <button class="btn link sm" data-act="reset-prefs">Reset</button></p>` : ""}
