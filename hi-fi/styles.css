@@ -832,7 +832,7 @@ button.conf-row { display:block; width:calc(100% - 4px); padding:0; border:0; ba
 .leg-chain { flex-wrap:nowrap; gap:4px; }
 .leg-chain .lc-sep { margin:0 -1px; }
 .rc-status .st { white-space:nowrap; }
-.toast { right:64px; }
+#phone:has(#screen-details.open) .toast { right:64px; }
 
 /* v4.12: Profile preferences are 0–10 sliders only (no checkboxes) */
 .pref-item.lvl { padding:12px 4px 0; border-bottom:1px solid var(--line-2); }
@@ -842,3 +842,5 @@ button.conf-row { display:block; width:calc(100% - 4px); padding:0; border:0; ba
 .pref-item.lvl.on .pl-head output { background:var(--accent-soft); color:var(--accent-ink); }
 .btn.link.inline { padding:0; min-height:0; font-size:inherit; display:inline; }
 .pref-note { display:block; margin-top:2px; color:var(--muted); font-size:11.5px; font-weight:500; }
+.add-journey-row { display:flex; align-items:center; justify-content:center; gap:6px; margin-bottom:12px; border:1.5px dashed #c5cbd6; background:transparent; color:var(--accent); font-weight:700; }
+.add-journey-row svg { width:16px; height:16px; }

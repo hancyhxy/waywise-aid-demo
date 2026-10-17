@@ -574,13 +574,12 @@ function renderJourneys() {
   el.innerHTML = `
     <header class="app-header">
       <div><p class="overline">YOUR ROUTES</p><h2>Saved journeys</h2></div>
-      ${list && state.journeys.length ? `<button class="btn primary sm add-btn" data-act="add-journey">${ICON.plus} Add journey</button>` : ""}
     </header>
     <div class="segmented" role="tablist">
       <button role="tab" class="${list ? "active" : ""}" data-act="jview" data-view="list">Journeys</button>
       <button role="tab" class="${list ? "" : "active"}" data-act="jview" data-view="schedule">Schedule</button>
     </div>
-    ${list ? `<div class="jlist">${cards}</div>` : renderSchedule()}`;
+    ${list ? `<div class="jlist">${state.journeys.length ? `<button class="btn ghost full add-journey-row" data-act="add-journey">${ICON.plus} Add journey</button>` : ""}${cards}</div>` : renderSchedule()}`;
 }
 function renderSchedule() {
   const day = state.schedDay, dn = DAY_NAME[day], legs = scheduledToday(day);
@@ -1168,7 +1167,8 @@ const A = {
     const id = "j" + Date.now();
     state.journeys.push({ id, from, to, name: "", out: "", days: [], ret: null });
     state.leg = `${id}:out`; resetJourneyState(); setTab("today");
-    toast("Journey saved", "Here are today's options. A schedule is optional.", { act: "sched-open", attrs: `data-id="${id}"`, label: "Add to schedule" });
+    /* Same step 2 as Add journey: ask about a schedule, which stays optional. */
+    state.form = { id }; openSheet("form", "added");
   },
   "add-journey": b => { state.form = { from: "", to: "", name: "", hasRet: false, preDay: b?.dataset?.day || "" }; openSheet("form", "add"); },
   "edit-saved": b => {
