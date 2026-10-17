@@ -137,7 +137,7 @@ const state = {
   prefs: new Set(), showMore: false, selected: null, phase: "options", stage: 0, tab: "today", overlay: null,
   jview: "list", schedDay: "wed", occ: clone(SEED_OCC), noCommute: new Set(),
   defaults: clone(DEFAULTS), savedDefaults: clone(DEFAULTS), alertsOn: true, sharing: null, reports: [],
-  today: null, learn: true, actionable: true, sheet: null, form: {}
+  today: null, reminder: null, locPerm: null, learn: true, actionable: true, sheet: null, form: {}
 };
 
 /* ---------- derived ---------- */
@@ -339,7 +339,6 @@ function renderToday() {
 
   el.innerHTML = `${header}
     ${S[state.scenario] && state.leg === S[state.scenario].leg && !state.today ? `<p class="mood">${esc(S[state.scenario].copy)}</p>` : ""}
-    ${active ? `<button class="active-banner" data-act="open-active"><span class="pulse"></span><span><b>Journey active</b> · ${esc(active.title)} · arrives ${active.arrives}</span><span aria-hidden="true">›</span></button>` : ""}
     ${sharing}
     ${status}
     <article class="search-card" aria-label="Journey for today">
@@ -628,7 +627,7 @@ function renderDetails() {
     : started ? `<button class="btn primary full" data-act="switch-to" data-id="${o.id}">Switch to this route</button>`
       : `<button class="btn primary full" data-act="start">Start journey</button>`;
   el.innerHTML = `
-    <header class="sub-header"><button class="back" data-act="back-routes">${ICON.back} Back to routes</button></header>
+    <div class="drawer-top"><button class="grab" data-act="close-drawer" aria-label="Collapse"></button><button class="drawer-x" data-act="close-drawer" aria-label="Close">×</button></div>
     <p class="overline">ROUTE DETAILS</p>
     <h2 class="title">${esc(o.title)}</h2>
     <p class="muted">${esc(d.from)} → ${esc(d.to)}</p>
@@ -663,14 +662,16 @@ function renderActive() {
     { t: `You've arrived at ${d.to}`, s: "Thanks for travelling with Waywise.", b: null }
   ][st];
   el.innerHTML = `
-    <header class="sub-header"><button class="back" data-act="tab" data-tab="today">${ICON.back} Today</button><span class="live-pill"><span class="pulse"></span>Journey active</span></header>
-    <p class="overline">${esc(d.from.toUpperCase())} → ${esc(d.to.toUpperCase())}</p>
+    <div class="drawer-top"><button class="grab" data-act="close-drawer" aria-label="Collapse"></button><button class="drawer-x" data-act="close-drawer" aria-label="Close">×</button></div>
+    <span class="live-pill"><span class="pulse"></span>In progress</span>
+    <p class="overline" style="margin-top:10px">${esc(d.from.toUpperCase())} → ${esc(d.to.toUpperCase())}</p>
     <h2 class="title">${esc(o.title)}</h2>
     ${state.sharing?.live ? `<div class="share-banner">${ICON.share}<span>Sharing arrival updates with <b>${esc(state.sharing.to)}</b> · ${esc(state.sharing.until)}</span><button class="btn link sm" data-act="stop-share">Stop</button></div>` : ""}
     <article class="eta-card"><small>Estimated arrival</small><strong>${o.arrives}</strong><span>${lateBy(o, d) ? `${lateBy(o, d)} min after your ${d.target} ${d.targetLabel}` : d.target ? `On time for your ${d.target} ${d.targetLabel}` : "Estimate"} · confidence ${certainty(d.confidence)}</span></article>
     <ol class="stepper">${STAGES.map((s, i) => `<li class="${i < st ? "done" : i === st ? "now" : ""}"><i>${i < st ? ICON.check : i + 1}</i><span>${s}</span></li>`).join("")}</ol>
     <article class="next-card"><p class="overline">${st < 3 ? "NEXT STEP" : "DONE"}</p><strong>${esc(next.t)}</strong><p>${esc(next.s)}</p>
       ${next.b ? `<button class="btn primary sm" data-act="advance">${next.b}</button>` : `<button class="btn primary sm" data-act="end">End journey</button>`}</article>
+    ${st === 1 || st === 2 ? reminderCard(o, d) : ""}
     ${st < 2 ? `<button class="board-help" data-act="compare" data-mode="board">${ICON.warn}<span><b>Too full to board, or delayed?</b><small>See the next service and other routes with their trade-offs</small></span><i>›</i></button>` : ""}
     ${st < 3 ? `<section class="block"><p class="overline">CROWDING BY CARRIAGE</p>${carriageDiagram(o, d)}</section>` : ""}
     <div class="action-list">
@@ -678,7 +679,18 @@ function renderActive() {
       <button data-act="report">${ICON.flag}<span>Report carriage conditions</span><i>›</i></button>
       <button data-act="share">${ICON.share}<span>${state.sharing?.live ? "Sharing arrival updates" : "Share journey"}</span><i>›</i></button>
     </div>
-    ${st < 3 ? `<button class="btn link full danger" data-act="end">End journey</button>` : ""}`;
+    ${st < 3 ? `<button class="btn ghost full danger end-btn" data-act="end-ask">End journey</button><p class="hint center">You can end the journey at any time.</p>` : ""}`;
+}
+/* Arrival reminder (extra, not in the evaluation list): needs location, falls back to the timetable. */
+function reminderCard(o, d) {
+  const at = fmt(arrEnd(o) - 4), r = state.reminder, perm = state.locPerm;
+  const on = !!r;
+  const sub = !on ? `We'll tell you when to get ready, one stop before ${esc(d.to)}.`
+    : r === "location" ? `On · using your location${perm === "once" ? " (this trip only)" : ""}. One stop before ${esc(d.to)}, about ${at}.`
+      : `On · by timetable, about ${at}. Less accurate without location.`;
+  return `<div class="toggle-card reminder${on ? " on" : ""}"><span>${ICON.bell}<span><strong>Arrival reminder</strong><small>${sub}</small>
+      ${r === "timetable" ? `<button class="btn link sm" data-act="perm-ask">Use my location instead</button>` : ""}</span></span>
+    <button class="toggle${on ? " active" : ""}" data-act="reminder" aria-pressed="${on}"><i></i></button></div>`;
 }
 
 /* ---------- sheets ---------- */
@@ -738,6 +750,12 @@ const SHEETS = {
         <button class="btn primary full" data-act="close-sheet">${n ? `Show options · ${n} selected` : "Show options"}</button>
         <div class="split"><button class="btn link sm" data-act="reset-prefs" ${n ? "" : "disabled"}>Reset</button><button class="btn link sm" data-act="save-default" ${n ? "" : "disabled"}>Save as default</button></div>
       </div>`;
+  },
+  endConfirm() {
+    const o = selectedOption(current());
+    return `<p class="overline">END JOURNEY</p><h3>End this journey?</h3>
+      <p class="sheet-lede">${esc(o.title)}. Alerts${state.reminder ? " and your arrival reminder" : ""} will stop.${state.sharing?.live ? ` <b>${esc(state.sharing.to)}</b> will stop getting arrival updates.` : ""}</p>
+      <div class="sheet-actions"><button class="btn primary full danger-fill" data-act="end">End journey</button><button class="btn ghost full" data-act="close-sheet">Keep going</button></div>`;
   },
   method() {
     return `<p class="overline">HOW RECOMMENDATIONS WORK</p><h3>Useful detail, not a black box</h3>
@@ -877,6 +895,17 @@ function journeyForm(mode) {
   return "";
 }
 
+/* Simulated iOS location permission prompt (prototype only). */
+function openPerm() {
+  const d = current();
+  $("#perm").innerHTML = `<div class="perm-box" role="alertdialog" aria-labelledby="perm-t">
+    <strong id="perm-t">Allow “Waywise” to use your location?</strong>
+    <p>Used on this device to remind you one stop before ${esc(d.to)}. Shared journeys only show progress by stop, never your exact location.</p>
+    <button data-act="perm" data-v="always">Allow While Using App</button>
+    <button data-act="perm" data-v="once">Allow Once</button>
+    <button data-act="perm" data-v="deny">Don't Allow</button></div>`;
+  $("#perm").classList.add("open");
+}
 /* ---------- toast ---------- */
 function toast(title, copy, action) {
   const t = $("#toast");
@@ -887,13 +916,20 @@ function toast(title, copy, action) {
 
 /* ---------- navigation ---------- */
 function show() {
-  const screen = state.overlay || state.tab;
-  $$(".screen").forEach(s => s.classList.toggle("active", s.id === `screen-${screen}`));
+  $$(".screen:not(.drawer)").forEach(s => s.classList.toggle("active", s.id === `screen-${state.tab}`));
+  $$(".screen.drawer").forEach(s => s.classList.toggle("open", s.id === `screen-${state.overlay}`));
+  $("#drawer-backdrop").classList.toggle("open", !!state.overlay);
   $$(".nav-item").forEach(b => b.classList.toggle("active", b.dataset.tab === state.tab));
   renderAll();
 }
+function renderMini() {
+  const d = current(), o = state.phase === "active" ? selectedOption(d) : null, m = $("#mini-bar");
+  const showIt = o && state.overlay !== "active";
+  m.classList.toggle("show", !!showIt);
+  if (showIt) m.innerHTML = `<span class="pulse"></span><span class="mb-main"><b>In progress · ${esc(o.title)}</b><small>${STAGES[state.stage]} · arrives ${o.arrives}</small></span><span class="mb-open">Open ›</span>`;
+}
 function renderAll() {
-  renderToday(); renderJourneys(); renderProfile();
+  renderToday(); renderJourneys(); renderProfile(); renderMini();
   if (state.overlay === "details") renderDetails();
   if (state.overlay === "active") renderActive();
 }
@@ -947,10 +983,29 @@ const A = {
   "start-route": b => { state.preview = b.dataset.id; A.start(); },
   "open-route": b => { state.preview = b.dataset.id; closeSheet(); openOverlay("details"); },
   "back-routes": () => { state.overlay = null; show(); },
-  start: () => { state.selected = state.preview; state.phase = "active"; state.stage = 0; openOverlay("active"); toast("Journey started", state.alertsOn ? "We'll alert you if anything changes." : "Alerts are off for this journey."); },
+  "close-drawer": () => { state.overlay = null; show(); },
+  "undo-start": () => {
+    if (state.phase !== "active") return;
+    state.preview = state.selected; state.selected = null; state.phase = "options"; state.stage = 0; state.reminder = null;
+    $("#toast").classList.remove("show"); openOverlay("details"); toast("Journey not started", "Nothing changed. Start when you're ready.");
+  },
+  "end-ask": () => openSheet("endConfirm"),
+  reminder: () => {
+    if (state.reminder) { state.reminder = null; renderActive(); return; }
+    if (state.locPerm === "allowed") { state.reminder = "location"; renderActive(); toast("Arrival reminder on", "Using your location."); return; }
+    openPerm();
+  },
+  "perm-ask": () => openPerm(),
+  perm: b => {
+    const v = b.dataset.v; $("#perm").classList.remove("open");
+    if (v === "deny") { state.locPerm = "denied"; state.reminder = "timetable"; toast("Reminder by timetable", "Location is off, so the reminder may be less accurate."); }
+    else { state.locPerm = v === "once" ? "once" : "allowed"; state.reminder = "location"; toast("Arrival reminder on", "Using your location only on this device."); }
+    renderActive(); renderMini();
+  },
+  start: () => { state.selected = state.preview; state.phase = "active"; state.stage = 0; state.reminder = null; openOverlay("active"); toast("Journey started", state.alertsOn ? "We'll alert you if anything changes." : "Alerts are off for this journey.", { act: "undo-start", label: "Undo" }); },
   "open-active": () => openOverlay("active"),
   advance: () => { state.stage = Math.min(3, state.stage + 1); if (state.stage === 3 && state.sharing?.live && state.sharing.until === "Until I arrive") { state.sharing = null; toast("Sharing stopped", "You've arrived, so arrival updates ended automatically."); } renderAll(); },
-  end: () => { const wasSharing = state.sharing?.live; resetJourneyState(); setTab("today"); toast("Journey ended", wasSharing ? "Arrival updates stopped." : ""); },
+  end: () => { const wasSharing = state.sharing?.live; closeSheet(); resetJourneyState(); state.reminder = null; setTab("today"); toast("Journey ended", wasSharing ? "Arrival updates stopped." : ""); },
   compare: b => openSheet("compare", b.dataset.mode),
   "switch-to": b => {
     const d = current(), o = d.options.find(x => x.id === b.dataset.id);
@@ -1075,6 +1130,12 @@ const A = {
 };
 
 /* ---------- events ---------- */
+(() => {
+  let y0 = null, el = null;
+  document.addEventListener("touchstart", e => { const t = e.target.closest(".drawer-top"); if (!t) return; el = t.closest(".drawer"); y0 = e.touches[0].clientY; el.style.transition = "none"; }, { passive: true });
+  document.addEventListener("touchmove", e => { if (y0 === null) return; const dy = Math.max(0, e.touches[0].clientY - y0); el.style.transform = `translateY(${dy}px)`; }, { passive: true });
+  document.addEventListener("touchend", e => { if (y0 === null) return; const dy = e.changedTouches[0].clientY - y0; el.style.transition = ""; el.style.transform = ""; y0 = null; if (dy > 90) A["close-drawer"](); });
+})();
 $("#phone").addEventListener("scroll", e => { if (e.target.id === "phone") { e.target.scrollTop = 0; e.target.scrollLeft = 0; } });
 document.addEventListener("click", e => {
   const sc = e.target.closest("[data-scenario]");

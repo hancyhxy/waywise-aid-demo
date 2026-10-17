@@ -24,7 +24,7 @@ Source: Evelyn's synthesis in `a2-deliverables/03-usability-evaluation/synthesis
 | R5 | **Profile** from the AL avatar: account sync status and default preferences | Profile tab |
 | R6 | Today opens on the journey from that day's schedule, labelled "Based on your Wednesday schedule, we recommend". No schedule for the day (or "No commute" / skipped) → empty From/To card. From/To card with swap button and Leave / Arrive by; tapping From/To opens a full-height **Change journey** layer (type a route, or tap today's or other saved journeys) without reloading Today | Today |
 | R7 | Separate scopes: Edit today's journey / Edit saved journey / Edit this occurrence / Edit recurring schedule, with matching titles and Save labels | Sheets |
-| R8 | Route cards: tap the card or **View details** → Route details → **Start journey**; or **Start** directly on the card. "Journey started" confirmation, then the active journey. No separate "selected" state or Undo: viewing details commits nothing, and after starting, Switch / Compare alternatives / End journey give control back | Today, Route details, active |
+| R8 | Route cards: tap the card or **View details** → Route details drawer → **Start journey** (or **Start** on the card). The same ≈88% drawer then shows **In progress**; × or swipe down only collapses it to a mini bar above the nav (visible on every tab), tap to reopen. "Journey started" toast with **Undo** for a mis-tap. **End journey** is available at any step and asks for confirmation (mentions alerts and live sharing that will stop). No separate "selected" state | Today, drawers |
 | R9 | Quick preferences stay on Today ("Tune this journey"): "Arrive sooner", "Prioritise a seat", "Select all that apply · applies to this journey only", check marks, Reset; less-used options under "More preferences" | Today |
 | R10 | Today's choices apply to this journey only; explicit "Save as default"; Reset | Today, Profile |
 | R11 | More preferences: less waiting, predictable arrival, transport modes | Today, Profile |
@@ -36,6 +36,11 @@ Source: Evelyn's synthesis in `a2-deliverables/03-usability-evaluation/synthesis
 | R17 | Compare alternatives from details and active journey; "Too full to board, or delayed?" | Details, active |
 | R18 | Report carriage conditions; shown as passenger reports, separate from operator data | Details, active |
 | R19 | Share journey: arrival time once, or time-limited live arrival updates (progress by stop, not GPS location) | Details, active |
+
+## Added beyond the evaluation list
+
+- **Arrival reminder** (In progress, Board / On board steps): "remind me one stop before <destination>". Turning it on shows a simulated iOS location prompt (Allow While Using App / Allow Once / Don't Allow). Don't Allow falls back to a timetable-based reminder with "Use my location instead". Location is used on the device only; shared journeys still show progress by stop (R19).
+- Start → **Undo** toast and **End journey** confirmation (interaction details supporting user control).
 
 ## Demo data
 

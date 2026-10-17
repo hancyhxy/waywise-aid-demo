@@ -11,7 +11,7 @@
   <meta name="description" content="Waywise high-fidelity prototype: personalised commute decisions under crowding and disruption.">
   <link rel="manifest" href="manifest.webmanifest">
   <title>Waywise — High-fidelity prototype</title>
-  <link rel="stylesheet" href="styles.css?v=202610172100">
+  <link rel="stylesheet" href="styles.css?v=202610172230">
 </head>
 <body>
   <div class="demo-shell">
@@ -42,7 +42,7 @@
           <li><b>Profile</b> from the avatar: account sync, default preferences.</li>
           <li>Saved routes and return trips on Today, with a suggested journey.</li>
           <li>Separate scopes: today / saved journey / one date / recurring schedule.</li>
-          <li>Tap a route or <b>View details</b> → <b>Route details</b> → Start journey (or Start on the card).</li>
+          <li>Tap a route or <b>View details</b> → Route details drawer → Start journey → <b>In progress</b> drawer (× collapses to a mini bar; End journey any time, with confirmation).</li>
           <li>Clear preference labels, “Select all that apply”, check marks.</li>
           <li>Today's choices vs saved defaults; explicit “Save as default”.</li>
           <li>More preferences: less waiting, predictable arrival, transport modes.</li>
@@ -64,8 +64,10 @@
       <section class="screen" id="screen-today" aria-label="Today"></section>
       <section class="screen" id="screen-journeys" aria-label="Saved journeys"></section>
       <section class="screen" id="screen-profile" aria-label="Profile"></section>
-      <section class="screen overlay" id="screen-details" aria-label="Journey details"></section>
-      <section class="screen overlay" id="screen-active" aria-label="Active journey"></section>
+      <div class="drawer-backdrop" id="drawer-backdrop" data-act="close-drawer"></div>
+      <section class="screen overlay drawer" id="screen-details" aria-label="Route details"></section>
+      <section class="screen overlay drawer" id="screen-active" aria-label="Journey in progress"></section>
+      <button class="mini-bar" id="mini-bar" data-act="open-active" aria-label="Open journey in progress"></button>
 
       <nav class="bottom-nav" aria-label="Primary navigation">
         <button class="nav-item" data-act="tab" data-tab="today"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.2"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg><small>Today</small></button>
@@ -77,8 +79,9 @@
       <div class="sheet-backdrop" id="backdrop" data-act="close-sheet"></div>
       <section class="bottom-sheet" id="sheet" role="dialog" aria-modal="true"></section>
       <div class="toast" id="toast" role="status" aria-live="polite"></div>
+      <div class="perm" id="perm"></div>
     </main>
   </div>
-  <script src="app.js?v=202610172100"></script>
+  <script src="app.js?v=202610172230"></script>
 </body>
 </html>
