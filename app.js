@@ -453,13 +453,15 @@ function reasonShort(o, d) {
   return "best overall fit";
 }
 const journeyProgress = () => Math.max(6, state.stage / 3 * 100);
+const ACTION_PHRASE = { take: "take this train", wait: "wait for this one", switch: "switch to this route", bus: "take the bus" };
+const actionPhrase = o => (o.mode === "bus" ? "take the bus" : ACTION_PHRASE[o.kind] || "take this one");
 function routeCard(o, d, rec) {
   const isRec = o.id === rec.id, live = state.phase === "active" && o.id === state.selected, late = lateBy(o, d), p = state.prefs;
   const f = on => (on ? " focus" : "");
   const conf = conflicts(o, d).filter(c => !c.startsWith("Arrives"));
   const kind = { take: ICON.go, wait: ICON.clock, switch: ICON.swap, bus: ICON.swap }[o.kind] || ICON.go;
   const strip = live ? `<div class="rec-strip live-strip"><span class="pulse"></span>In progress · ${STAGES[state.stage]}</div>`
-    : isRec ? `<div class="rec-strip">${ICON.sparkle}<span><b>Recommended</b> · ${reasonShort(o, d)}</span></div>` : "";
+    : isRec ? `<div class="rec-strip">${ICON.sparkle}<span><b>Recommended · ${actionPhrase(o)}</b> — ${reasonShort(o, d)}</span></div>` : "";
   const mid = live
     ? `<div class="jprog-cap"><b>${STAGES[state.stage]}</b><span>arrives <b>${o.arrives}</b></span></div>
       <div class="jprog" role="img" aria-label="Journey progress: ${STAGES[state.stage]}"><span style="width:${journeyProgress()}%"></span><i></i><i></i></div>`
