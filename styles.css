@@ -701,3 +701,4 @@ body.export .demo-notes { display:none; }
 .rank-cap { flex:none; color:var(--muted); font-size:12.5px; font-weight:650; }
 .rank-row .fchip { min-width:0; }
 .rank-row .fchip .chev { margin-left:2px; font-size:10px; }
+.rc-next { color:var(--muted); }

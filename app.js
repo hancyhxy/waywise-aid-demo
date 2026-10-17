@@ -198,6 +198,10 @@ function shifted(base, leave) {
 const greet = c => (toMin(c) < 720 ? "Morning, Alex" : toMin(c) < 1020 ? "Afternoon, Alex" : "Evening, Alex");
 const lateBy = (o, d) => (d.target ? Math.max(0, arrEnd(o) - toMin(d.target)) : 0);
 const platformWait = o => Math.max(0, toMin(o.departs) - toMin(o.leaveBy) - o.walkTo);
+const nextDep = (o, d) => {
+  const sib = d.options.filter(x => x.mode === o.mode && toMin(x.departs) > toMin(o.departs)).sort((a, b) => toMin(a.departs) - toMin(b.departs))[0];
+  return sib ? fmt(toMin(sib.departs)) : `~${fmt(toMin(o.departs) + 10)}`;
+};
 const totalMin = o => arrEnd(o) - toMin(o.leaveBy);
 /* minutes from the earliest possible departure until arrival: waiting for a later service counts as time */
 const etaMin = (o, d) => arrEnd(o) - Math.min(...d.options.map(x => toMin(x.leaveBy)));
@@ -459,7 +463,7 @@ function routeCard(o, d, rec) {
         </div>
         <div class="rc-arrive${f(p.has("sooner"))}"><small>Arrives</small><strong class="${o.arrives.length > 5 ? "range" : ""}${late ? " late" : ""}">${o.arrives}</strong>${late ? `<em class="late">${late} min late</em>` : d.target ? `<em class="ontime">On time</em>` : "<em>estimate</em>"}</div>
       </div>
-      <p class="rc-times">Leave by <b>${o.leaveBy}</b> · departs <b>${o.departs}</b> · ${esc(o.platform.split(",").pop().trim())} · ${platformWait(o)} min wait</p>
+      <p class="rc-times">Leave by <b>${o.leaveBy}</b> · departs <b>${o.departs}</b> · ${esc(o.platform.split(",").pop().trim())} · ${platformWait(o)} min wait<span class="rc-next"> · next ${nextDep(o, d)}</span></p>
       ${cmp ? `<p class="compare-line">${cmp}</p>` : ""}
       <div class="rc-status">
         <span class="st crowd-${o.crowd}${f(p.has("seat"))}"><i></i>${CROWD[o.crowd]} crowding</span>
@@ -623,7 +627,7 @@ function carriageDiagram(o, d) {
 function legsTimeline(o, d) {
   const steps = [
     { icon: ICON.walk, t: `Walk ${o.walkTo} min to ${o.platform}`, s: `Leave ${d.from} by ${o.leaveBy}` },
-    { icon: roundel(o.mode), t: o.service, s: `Departs ${o.departs} · about ${o.ride} min${o.transfers ? ` · ${o.transfers} transfer` : ""}` },
+    { icon: roundel(o.mode), t: o.service, s: `Departs ${o.departs} · about ${o.ride} min${o.transfers ? ` · ${o.transfers} transfer` : ""} · next service ${nextDep(o, current())}` },
     { icon: ICON.walk, t: `Walk ${Math.max(0, o.walk - o.walkTo)} min to ${d.to}`, s: `Arrive ${o.arrives} (estimate)` }
   ];
   return `<ol class="timeline">${steps.map(s => `<li><span class="tl-icon">${s.icon}</span><div><strong>${esc(s.t)}</strong><small>${esc(s.s)}</small></div></li>`).join("")}</ol>`;
