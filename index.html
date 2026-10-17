@@ -11,7 +11,7 @@
   <meta name="description" content="Waywise high-fidelity prototype: personalised commute decisions under crowding and disruption.">
   <link rel="manifest" href="manifest.webmanifest">
   <title>Waywise — High-fidelity prototype</title>
-  <link rel="stylesheet" href="styles.css?v=202610181710">
+  <link rel="stylesheet" href="styles.css?v=202610181900">
 </head>
 <body>
   <div class="demo-shell">
@@ -33,12 +33,15 @@
         <button class="scenario" data-scenario="normal">3 · Disruption on the way home</button>
       </div>
       <details class="changes">
-        <summary>What changed in v4.8 (journeys and schedule)</summary>
+        <summary>What changed in v4.8–4.9</summary>
         <ol>
           <li>Saved journey = where (From/To); schedule = when (days + time, per direction). Route first, schedule optional.</li>
           <li>After saving a journey: “Add to schedule” or “Not now”. Schedule has “Add to &lt;day&gt;”.</li>
           <li>Tap a scheduled trip: Show routes now, Change time or Remove, for only this date or every week; Edit saved journey changes the route.</li>
           <li>Route details: Start journey fixed at the bottom; “Not started yet” removed.</li>
+          <li>Preferences: usual set (Profile) vs “This journey” on Today; “Select all that apply”; Save for next time.</li>
+          <li>Route cards show Departs and Wait; later services say how much later they leave.</li>
+          <li>A shift start is a hard deadline: late options are never recommended.</li>
         </ol>
       </details>
       <details class="changes">
@@ -101,6 +104,6 @@
       <div class="perm" id="perm"></div>
     </main>
   </div>
-  <script src="app.js?v=202610181710"></script>
+  <script src="app.js?v=202610181900"></script>
 </body>
 </html>

@@ -797,3 +797,25 @@ body.export .demo-notes { display:none; }
 /* Profile: one page */
 #screen-profile .block > .overline { margin:0 2px 2px; }
 .profile-links { display:flex; justify-content:space-between; margin-top:8px; }
+/* v4.8: confidence lives in Route details; the row opens "How reliable is this estimate?" (R15). */
+button.conf-row { display:block; width:calc(100% - 4px); padding:0; border:0; background:none; text-align:left; line-height:1.45; }
+.conf-more { margin-left:4px; color:var(--faint); font-size:14px; }
+/* ---------- v4.9: evaluation follow-ups ---------- */
+/* R12: departs / wait on the card, and how much later a later service is */
+.rc-later { display:flex; align-items:center; gap:6px; margin:4px 0 0; color:var(--muted); font-size:12px; }
+.rc-later svg { width:13px; height:13px; }
+/* Preferences: usual set vs this journey */
+.rank-cap.temp { padding:4px 8px; border-radius:7px; background:var(--chip); color:var(--ink); font-size:11.5px; }
+.sec-head { display:flex; align-items:center; justify-content:space-between; margin:0 2px 2px; }
+.sec-head .overline { margin:0; }
+.saved-state { display:inline-flex; align-items:center; gap:4px; color:var(--green-ink); font-size:12px; font-weight:650; }
+.saved-state svg { width:13px; height:13px; stroke-width:2.6; }
+/* Single choice: no empty check boxes; the selected option shows a tick */
+.chip.single { padding-left:12px; }
+.chip.single i { display:none; }
+.chip.single.active { padding-left:9px; }
+.chip.single.active i { display:grid; width:14px; border:0; background:none; color:#fff; }
+/* Trade-offs are a caution, not an error: amber, so red stays for disruption and lateness */
+.tradeoff-banner { border-color:#ecd59c; background:var(--amber-soft); }
+/* Sharing banner: who on line 1, how long on line 2 */
+.share-banner span small { display:block; margin-top:1px; font-weight:500; opacity:.85; }

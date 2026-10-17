@@ -125,7 +125,7 @@ const SEED_OCC = {};
 const S = {
   capacity: {
     num: 1, label: "Comfortable journey home", leg: "uni:ret", day: "tue", clock: "17:30", copy: "Classes are done. Let's find you a comfortable ride home.",
-    overline: "TUESDAY · AFTER UNI", greeting: "Evening, Alex", target: "18:05", targetLabel: "arrive-by time",
+    overline: "TUESDAY · AFTER UNI", greeting: "Evening, Alex", target: null, targetLabel: "",
     alert: { tone: "amber", source: "Waywise prediction", title: "Peak-hour crowding at Central", copy: "North Shore trains are expected to be very full until about 18:00.", updated: "1 min ago", next: "17:35" },
     confidence: 74, why: "Peak-hour loads are predictable, but a held train can change crowding quickly.",
     options: [
@@ -256,7 +256,27 @@ function score(o, d) {
   if (modeAvoided(o)) v -= 60;
   return v;
 }
-const ranked = d => [...d.options].sort((a, b) => score(b, d) - score(a, d));
+/* A shift start is a hard deadline: a late option is never recommended while an on-time one exists (scenario card 2). */
+const hardDeadline = d => d.targetLabel === "shift start";
+const hardLate = (o, d) => (hardDeadline(d) && lateBy(o, d) > 0 ? 1 : 0);
+const ranked = d => [...d.options].sort((a, b) => (hardLate(a, d) - hardLate(b, d)) || (score(b, d) - score(a, d)));
+/* "10–30 min late" for range arrivals, "Up to 4 min late" when the range starts on time. */
+const lateText = (o, d) => {
+  const late = lateBy(o, d); if (!late) return "";
+  const parts = o.arrives.split("–");
+  if (parts.length > 1 && d.target) { const s = Math.max(0, toMin(parts[0]) - toMin(d.target)); if (s !== late) return s ? `${s}–${late} min late` : `Up to ${late} min late`; }
+  return `${late} min late`;
+};
+/* R12: a later service of the same mode states how much later it leaves and arrives. */
+const MODE_WORD = { train: "train", metro: "metro", bus: "bus" };
+function laterThanNext(o, d) {
+  const first = d.options.filter(x => x.mode === o.mode).sort((a, b) => toMin(a.departs) - toMin(b.departs))[0];
+  if (!first || first.id === o.id) return "";
+  const dep = toMin(o.departs) - toMin(first.departs), arr = arrEnd(o) - arrEnd(first);
+  if (dep <= 0) return "";
+  return `Departs ${dep} min later than the next ${MODE_WORD[o.mode] || "service"}${arr !== dep ? ` · arrives ${arr} min later` : ""}`;
+}
+const waitText = o => (platformWait(o) ? `Wait ${platformWait(o)} min` : "No wait");
 const selectedOption = d => d && d.options.find(o => o.id === state.selected);
 /* The route the user is looking at: Route details shows the preview; the active journey otherwise. */
 const focusId = () => (state.overlay === "details" ? state.preview || state.selected : state.selected);
@@ -302,7 +322,7 @@ function reason(o, d) {
   if (o.seat >= 3) bits.push(SEAT[o.seat].toLowerCase());
   if (o.walk <= 8) bits.push(`${o.walk} min walking`);
   if (o.reliability >= 85) bits.push(`${o.reliability}% on time`);
-  return `${p.size ? "Best balance of your choices" : "Best fit for your default preferences"}: ${bits.join(", ")}.`;
+  return `${p.size ? "Best balance of your choices" : "Best fit for your usual preferences"}: ${bits.join(", ")}.`;
 }
 function tradeoff(o, d) {
   const alts = d.options.filter(x => x.id !== o.id);
@@ -329,27 +349,10 @@ function scheduledToday(day) {
 }
 
 /* ---------- render: Today ---------- */
-function prefChip(p) {
-  const on = state.prefs.has(p.id);
-  return `<button class="chip${on ? " active" : ""}" data-act="pref" data-pref="${p.id}" role="checkbox" aria-checked="${on}"><i>${on ? ICON.check : ""}</i>${p.label}</button>`;
-}
 const norm = x => String(x || "").trim().toLowerCase();
+/* Preferences: one usual set (Profile) + one-off changes for this journey (Today). */
+const tempPrefs = () => JSON.stringify([...state.prefs].sort()) !== JSON.stringify([...state.prefDefault].sort());
 const shortPlace = x => String(x).replace(/\s*\(.*\)/, "");
-/* Today's plan: the day's scheduled journeys from the weekly template, with done / now / later. */
-function todayPlan() {
-  const legs = scheduledToday(state.day).filter(l => !l.skip && l.time);
-  if (!legs.length) return "";
-  let now = legs.findIndex(l => l.key === state.leg);
-  if (now < 0) now = legs.findIndex(l => toMin(l.time) >= toMin(state.clock) - 30);
-  return `<section class="plan" aria-label="Today's plan">
-    <div class="plan-head"><p class="overline">TODAY'S PLAN</p><button class="btn link sm" data-act="open-schedule">Schedule</button></div>
-    <ol class="plan-steps">${legs.map((l, i) => {
-      const st = now < 0 ? "done" : i < now ? "done" : i === now ? "now" : "later";
-      const cur = l.key === state.leg && !state.today;
-      return `<li class="${st}${cur ? " current" : ""}"><button data-act="use-leg" data-leg="${l.key}" aria-current="${cur}">
-        <i>${st === "done" ? ICON.check : ""}</i><time>${fmt(toMin(l.time))}</time><span>To ${esc(shortPlace(l.to))}</span></button></li>`;
-    }).join("")}</ol></section>`;
-}
 function renderToday() {
   const el = $("#screen-today"), d = current();
   $("#clock").textContent = state.clock;
@@ -371,21 +374,22 @@ function renderToday() {
     return;
   }
   const rank = ranked(d), rec = rank[0], L = d.L;
+  const seatLate = hardDeadline(d) && state.prefs.has("seat") ? d.options.filter(o => lateBy(o, d) && o.seat > rec.seat).sort((a, b) => b.seat - a.seat)[0] : null;
   const sched = scheduledToday(state.day).find(x => x.key === state.leg && !x.skip);
   const status = state.today
-    ? (L.key ? `<div class="sc-cap today"><span>Changed for today only</span><button class="btn link sm" data-act="f-clear-today">Back to saved journey</button></div>`
-      : `<div class="sc-cap today"><span>Route for today only</span><button class="btn link sm" data-act="save-adhoc">Save as journey</button></div>`)
+    ? (L.key ? `<div class="sc-cap today"><span>Changed for this journey only</span><button class="btn link sm" data-act="f-clear-today">Back to saved journey</button></div>`
+      : `<div class="sc-cap today"><span>Route for this journey only</span><button class="btn link sm" data-act="save-adhoc">Save as journey</button></div>`)
     : sched && state.leg === state.suggested ? `<div class="sc-cap">${ICON.sparkle}<span>Suggested from your ${DAY_NAME[state.day]} schedule</span></div>`
       : `<div class="sc-cap plain"><span>Saved journey${L.j.name ? ` · ${esc(L.j.name)}` : ""}</span></div>`;
   const active = state.phase === "active" ? selectedOption(d) : null;
-  const sharing = state.sharing && state.sharing.live ? `<div class="share-banner">${ICON.share}<span>Sharing arrival updates with <b>${esc(state.sharing.to)}</b> · ${esc(state.sharing.until)}</span><button class="btn link sm" data-act="stop-share">Stop</button></div>` : "";
+  const sharing = state.sharing && state.sharing.live ? `<div class="share-banner">${ICON.share}<span>Sharing arrival updates with <b>${esc(state.sharing.to)}</b><small>${state.sharing.until === "Until I arrive" ? "Until you arrive" : `For ${esc(state.sharing.until)}`}</small></span><button class="btn link sm" data-act="stop-share">Stop</button></div>` : "";
   const leave = fmt(Math.min(...d.options.map(o => toMin(o.leaveBy))));
   const np = state.prefs.size;
 
-  const plist = [...state.prefs].map(prefLabel);
+  const plist = [...PREFS, ...MORE_PREFS].filter(x => state.prefs.has(x.id)).map(x => x.label);
   const prefBar = np
-    ? `<div class="rank-row"><span class="rank-cap">Your preferences</span><button class="fchip on" data-act="prefs"><span class="fc-l">${esc(plist.slice(0, 2).join(", "))}</span>${np > 2 ? `<span>+${np - 2}</span>` : ""}<b class="chev">▾</b></button></div>`
-    : `<div class="rank-row"><span class="rank-cap">Your preferences</span><button class="fchip" data-act="prefs">Set what matters<b class="chev">▾</b></button></div>`;
+    ? `<div class="rank-row">${tempPrefs() ? `<span class="rank-cap temp">This journey</span>` : `<span class="rank-cap">Your preferences</span>`}<button class="fchip on" data-act="prefs"><span class="fc-l">${esc(plist.slice(0, 2).join(", "))}</span>${np > 2 ? `<span>+${np - 2}</span>` : ""}<b class="chev">▾</b></button></div>`
+    : `<div class="rank-row">${tempPrefs() ? `<span class="rank-cap temp">This journey</span>` : `<span class="rank-cap">Your preferences</span>`}<button class="fchip" data-act="prefs">Set what matters<b class="chev">▾</b></button></div>`;
   el.innerHTML = `${header}
     ${sharing}
     <article class="search-card" aria-label="Journey for today">
@@ -405,14 +409,13 @@ function renderToday() {
     <section class="block results">
       <div class="section-heading">
         <h3>Route options</h3>
-        <button class="conf-pill" data-act="certainty" aria-label="How accurate are these arrival times?"><i class="c-${certainty(d.confidence).toLowerCase()}"></i>Arrivals ${CERT_RANGE[certainty(d.confidence)]}</button>
       </div>
       ${prefBar}
       ${d.alert.tone === "green" ? "" : `<div class="alert-card ${d.alert.tone}" role="status">
         <div class="alert-icon">!</div>
         <div><span class="source">${esc(d.alert.source)}</span><strong>${esc(d.alert.title)}</strong><p>${esc(d.alert.copy)}</p><small>Updated ${d.alert.updated} · next update ${d.alert.next}</small></div>
       </div>`}
-      ${lateBy(rec, d) && state.prefs.has("seat") ? `<div class="tradeoff-banner"><b>Trade-off:</b> ${esc(lcT(rec.title))} is more comfortable but arrives <b>${lateBy(rec, d)} min after</b> your ${d.target} ${d.targetLabel}.<button class="btn link sm" data-act="prefer-ontime">Prioritise on-time arrival</button></div>` : ""}
+      ${lateBy(rec, d) && state.prefs.has("seat") ? `<div class="tradeoff-banner"><b>Trade-off:</b> ${esc(lcT(rec.title))} is more comfortable but arrives <b>${lateBy(rec, d)} min after</b> your ${d.target} ${d.targetLabel}.<button class="btn link sm" data-act="prefer-ontime">Prioritise on-time arrival</button></div>`  : seatLate ? `<div class="tradeoff-banner"><b>Trade-off:</b> ${esc(seatLate.title)} has a better seat chance but arrives <b>${lateBy(seatLate, d)} min after</b> your ${d.target} ${d.targetLabel}, so the ${esc(lcT(rec.title))} is recommended.</div>` : ""}
       <div class="route-options">${d.options.map(o => routeCard(o, d, rec)).join("")}</div>
     </section>
     <p class="data-note">Arrival times, crowding and seat chances are estimates, not guarantees. Always follow official transport advice.</p>`;
@@ -444,7 +447,7 @@ function openSearch(focus) {
       <button class="btn primary full s-go" data-act="s-go" hidden>Show options for this route</button>
       ${today.length ? `<p class="overline sl-h">TODAY · ${DAY_NAME[state.day].toUpperCase()}</p><div class="saved-list">${today.map(l => savedItem(l)).join("")}</div>` : ""}
       ${others.length ? `<p class="overline sl-h">OTHER SAVED JOURNEYS</p><div class="saved-list">${others.map(l => savedItem(l)).join("")}</div>` : ""}
-      <p class="no-match" hidden>No saved journey matches. Tap “Show options” to plan this route for today only.</p>
+      <p class="no-match" hidden>No saved journey matches. Tap “Show options” to plan this route for this journey only.</p>
       <button class="btn link sm sl-add" data-act="add-journey">${ICON.plus} Add journey</button>
     </div>`;
   lay.classList.add("open");
@@ -467,6 +470,7 @@ function filterSaved(initial) {
 /* Short label for the Recommended strip; the full sentence lives in Route details. */
 function reasonShort(o, d) {
   const opts = d.options, p = state.prefs;
+  if (hardDeadline(d) && !lateBy(o, d) && opts.some(x => lateBy(x, d))) return "on time for your shift";
   const checks = [
     ["seat", o.seat >= Math.max(...opts.map(x => x.seat)) && o.seat >= 3, "best seat chance"],
     ["sooner", arrEnd(o) <= Math.min(...opts.map(arrEnd)), "arrives earliest"],
@@ -490,7 +494,7 @@ function routeCard(o, d, rec) {
   const mid = live
     ? `<div class="jprog-cap"><b>${STAGES[state.stage]}</b><span>arrives <b>${o.arrives}</b></span></div>
       <ol class="stepper mini" aria-label="Journey progress">${STAGES.map((st, i) => `<li class="${i < state.stage ? "done" : i === state.stage ? "now" : ""}"><i>${i < state.stage ? ICON.check : i + 1}</i></li>`).join("")}</ol>`
-    : `<p class="rc-times">Leave by <b>${o.leaveBy}</b> · ${esc(o.platform.split(",").pop().trim())}</p>`;
+    : `<p class="rc-times">Leave by <b>${o.leaveBy}</b> · Departs <b>${o.departs}</b> · ${waitText(o)}</p>${laterThanNext(o, d) ? `<p class="rc-later">${ICON.clock}<span>${laterThanNext(o, d)}</span></p>` : ""}`;
   return `<article class="route-card${isRec ? " recommended" : ""}${live ? " live" : ""}" data-route="${o.id}" data-act="open-route" data-id="${o.id}" role="button" tabindex="0" aria-label="${esc(o.title)}: view route details">
     ${strip}
     <div class="rc-body">
@@ -499,7 +503,7 @@ function routeCard(o, d, rec) {
           ${legChain(o)}
           <h4><i class="kind-ic">${kind}</i>${esc(o.title)}</h4>
         </div>
-        <div class="rc-arrive"><small>Arrives</small><strong class="${o.arrives.length > 5 ? "range" : ""}${late ? " late" : ""}">${o.arrives}</strong>${late ? `<em class="late">${late} min late</em>` : d.target ? `<em class="ontime">On time</em>` : "<em>estimate</em>"}</div>
+        <div class="rc-arrive"><small>Arrives</small><strong class="${o.arrives.length > 5 ? "range" : ""}${late ? " late" : ""}">${o.arrives}</strong>${late ? `<em class="late">${lateText(o, d)}</em>` : d.target ? `<em class="ontime">On time</em>` : "<em>estimate</em>"}</div>
       </div>
       ${mid}
       <div class="rc-status">
@@ -597,16 +601,7 @@ function renderSchedule() {
 }
 
 /* ---------- render: Profile ---------- */
-const SLIDERS = [
-  { k: "time", t: "Arrive on time", s: "Arrive by your target time" },
-  { k: "seat", t: "Seat availability", s: "Prioritise services where a seat is more likely" },
-  { k: "crowd", t: "Avoid crowding", s: "Prefer services with more personal space" },
-  { k: "reliability", t: "Predictable arrival", s: "Prefer more predictable arrival times and connections" },
-  { k: "walk", t: "Less walking", s: "Shorter walks to and between stops" },
-  { k: "transfer", t: "Fewer transfers", s: "Prefer direct services" }
-];
 const MODES = [["train", "Train"], ["metro", "Metro"], ["bus", "Bus"], ["ferry", "Ferry"], ["lightrail", "Light rail"]];
-const dirty = () => JSON.stringify(state.defaults) !== JSON.stringify(state.savedDefaults);
 /* Profile = one page: account status, default travel preferences, alerts. Saved journeys stay in their own tab. */
 function renderProfile() {
   const el = $("#screen-profile"), n = state.journeys.length;
@@ -616,13 +611,13 @@ function renderProfile() {
     <header class="app-header"><div><p class="overline">PROFILE &amp; ACCOUNT</p><h2>Alex</h2></div><span class="avatar big">AL</span></header>
     <article class="account-card"><div class="acc-row">${ICON.cloud}<div><strong>Saved to your account</strong><small>alex.commuter@email.com<br>${n ? `${n} saved journey${n > 1 ? "s" : ""}, your schedule and preferences sync` : "Your preferences sync"} across your devices.</small></div></div></article>
     <section class="block">
-      <p class="overline">TRAVEL PREFERENCES</p>
-      <p class="hint">Your defaults for every journey. Changes on Today apply to that trip only, unless you tap Save as default.</p>
+      <div class="sec-head"><p class="overline">USUAL PREFERENCES</p><span class="saved-state">${ICON.check}Saved</span></div>
+      <p class="hint">Used at the start of every journey. Changes on Today apply to that journey only, unless you tap Save for next time.</p>
       <article class="pref-group"><div class="pref-list">${[...PREFS, MORE_PREFS[0]].map(row).join("")}</div></article>
       <div class="pref-card"><strong>Transport modes</strong><small>Turn off modes you'd rather not use. We'll explain if no route avoids them.</small>
         <div class="mode-chips">${MODES.map(([k, l]) => `<button class="chip${state.defaults.modes[k] ? " active" : ""}" data-act="mode" data-mode="${k}" role="checkbox" aria-checked="${state.defaults.modes[k]}"><i>${state.defaults.modes[k] ? ICON.check : ""}</i>${l}</button>`).join("")}</div>
       </div>
-      ${toggle("learn", "Learn from my choices", "Suggest changes to my defaults; never change them without asking")}
+      ${toggle("learn", "Learn from my choices", "Suggest changes to my usual preferences; never change them without asking")}
       <div class="profile-links"><button class="btn link sm" data-act="method">How recommendations work ›</button><button class="btn link sm" data-act="reset-defaults">Reset preferences</button></div>
     </section>
     <section class="block">
@@ -654,7 +649,7 @@ function carriageDiagram(o, d) {
 }
 function legsTimeline(o, d) {
   const steps = [
-    { icon: ICON.walk, t: `Walk ${o.walkTo} min to ${o.platform}`, s: `Leave ${d.from} by ${o.leaveBy}` },
+    { icon: ICON.walk, t: `Walk ${o.walkTo} min to ${o.platform}`, s: `Leave ${d.from} by ${o.leaveBy}${platformWait(o) ? ` · then about ${platformWait(o)} min wait` : ""}` },
     { icon: roundel(o.mode), t: o.service, s: `Departs ${o.departs} · about ${o.ride} min${o.transfers ? ` · ${o.transfers} transfer` : ""} · next service ${nextDep(o, current())}` },
     { icon: ICON.walk, t: `Walk ${Math.max(0, o.walk - o.walkTo)} min to ${d.to}`, s: `Arrive ${o.arrives} (estimate)` }
   ];
@@ -718,21 +713,21 @@ function renderJourney() {
     <h2 class="title">${esc(o.title)}</h2>
     <p class="muted">${esc(d.from)} → ${esc(d.to)}</p>
     ${status}
-    ${live && state.sharing?.live ? `<div class="share-banner">${ICON.share}<span>Sharing arrival updates with <b>${esc(state.sharing.to)}</b> · ${esc(state.sharing.until)}</span><button class="btn link sm" data-act="stop-share">Stop</button></div>` : ""}
+    ${live && state.sharing?.live ? `<div class="share-banner">${ICON.share}<span>Sharing arrival updates with <b>${esc(state.sharing.to)}</b><small>${state.sharing.until === "Until I arrive" ? "Until you arrive" : `For ${esc(state.sharing.until)}`}</small></span><button class="btn link sm" data-act="stop-share">Stop</button></div>` : ""}
     <article class="summary-card${live ? " live" : ""}">
       <div class="timegrid big">
         <div><small>Leave by</small><strong>${o.leaveBy}</strong></div>
         <div><small>Departs</small><strong>${o.departs}</strong><em>${esc(o.platform)}</em></div>
-        <div><small>Arrives</small><strong>${o.arrives}</strong>${late ? `<em class="late">${late} min late</em>` : d.target ? `<em class="ontime">On time</em>` : ""}</div>
+        <div><small>Arrives</small><strong>${o.arrives}</strong>${late ? `<em class="late">${lateText(o, d)}</em>` : d.target ? `<em class="ontime">On time</em>` : ""}</div>
       </div>
-      <p class="conf-row"><i class="c-${certainty(d.confidence).toLowerCase()}"></i>Arrival estimate confidence: <b>${certainty(d.confidence)}</b> · updated ${d.alert.updated}</p>
+      <button class="conf-row" data-act="certainty" aria-label="How reliable is this estimate?"><i class="c-${certainty(d.confidence).toLowerCase()}"></i>Arrival estimate confidence: <b>${certainty(d.confidence)}</b> · updated ${d.alert.updated}<span class="conf-more">›</span></button>
     </article>
     ${switchDiff}
     ${live ? liveBody : legsTimeline(o, d) + whyDetails(o, d)}
     ${!arrived ? `<section class="block"><p class="overline">CROWDING BY CARRIAGE</p><h3>Where to board</h3>${carriageDiagram(o, d)}</section>` : ""}
     ${live ? "" : `<div class="toggle-card"><span>${ICON.bell}<span><strong>Alerts for this journey</strong><small>${state.alertsOn ? "On: we'll tell you if this service is delayed or gets too crowded." : "Off: you won't be notified about changes to this journey."}</small></span></span><button class="toggle${state.alertsOn ? " active" : ""}" data-act="toggle" data-key="alertsOn" aria-pressed="${state.alertsOn}"><i></i></button></div>`}
     <div class="action-list">
-      <button data-act="compare">${ICON.compare}<span>Compare alternatives</span><i>›</i></button>
+      ${arrived ? "" : `<button data-act="compare">${ICON.compare}<span>Compare alternatives</span><i>›</i></button>`}
       <button data-act="report">${ICON.flag}<span>Report carriage conditions</span><i>›</i></button>
       <button data-act="share">${ICON.share}<span>${state.sharing?.live ? "Sharing arrival updates" : "Share journey"}</span><i>›</i></button>
     </div>
@@ -773,13 +768,13 @@ const SHEETS = {
     const n = state.prefs.size;
     const dirty = JSON.stringify([...state.prefs].sort()) !== JSON.stringify([...state.prefDefault].sort());
     return `<p class="overline">YOUR PREFERENCES</p><h3>What matters to you?</h3>
-      <p class="hint">Your saved defaults apply everywhere. Changes here affect today's search until you save or reset them.</p>
+      <p class="hint">Select all that apply · applies to this journey only.</p>
       <div class="pref-list">${PREFS.map(row).join("")}</div>
       <p class="overline sl-h">MORE</p>
       <div class="pref-list">${MORE_PREFS.map(row).join("")}</div>
       <div class="sheet-actions">
         <button class="btn primary full" data-act="close-sheet">Done${n ? ` · ${n} selected` : ""}</button>
-        ${dirty ? `<div class="split"><button class="btn link sm" data-act="reset-prefs">Back to default</button><button class="btn link sm" data-act="save-default">Save as default</button></div>` : ""}
+        ${dirty ? `<div class="split"><button class="btn link sm" data-act="reset-prefs">Reset</button><button class="btn link sm" data-act="save-default">Save for next time</button></div>` : ""}
       </div>`;
   },
   switchConfirm(id) {
@@ -798,7 +793,7 @@ const SHEETS = {
   method() {
     return `<p class="overline">HOW RECOMMENDATIONS WORK</p><h3>Useful detail, not a black box</h3>
       <div class="method-item"><span>1</span><div><strong>Current conditions</strong><p>Delays, frequency, crowding and when the data was last updated. Operator updates are labelled separately from Waywise predictions.</p></div></div>
-      <div class="method-item"><span>2</span><div><strong>Your preferences</strong><p>One set, applied to every journey. Change them from Today or Profile.</p></div></div>
+      <div class="method-item"><span>2</span><div><strong>Your preferences</strong><p>Your usual preferences start every journey. Changes on Today apply to that journey only, unless you save them for next time.</p></div></div>
       <div class="method-item"><span>3</span><div><strong>Arrival estimate confidence</strong><p>How closely arrival times and crowding are likely to match what's shown.</p></div></div>
       <button class="btn ghost full" data-act="close-sheet">Done</button>`;
   },
@@ -825,7 +820,7 @@ const SHEETS = {
     return `<p class="overline">${mode === "board" ? "CAN'T BOARD OR DELAYED?" : "COMPARE ALTERNATIVES"}</p><h3>Other ways to ${esc(d.to)}</h3>
       <p class="sheet-lede">Compared with <b>${esc(lcT(cur.title))}</b> (arrives ${cur.arrives}).${mode === "board" ? " If this service is too full to board, the next service and other routes are below." : ""}</p>
       ${alts.map(o => `<article class="alt-card"><div><strong>${esc(o.title)}</strong><small>Departs ${o.departs} · arrives ${o.arrives} · ${CROWD[o.crowd].toLowerCase()} crowding</small><p>${diff(o)}</p></div>
-        <button class="btn primary sm" data-act="${state.phase === "active" ? "switch-ask" : "switch-to"}" data-id="${o.id}">Switch</button></article>`).join("")}
+        <button class="btn primary sm" data-act="${state.phase === "active" ? "switch-ask" : "switch-to"}" data-id="${o.id}">${state.phase === "active" ? "Switch" : "View"}</button></article>`).join("")}
       <button class="btn ghost full" data-act="close-sheet">Keep ${esc(lcT(cur.title))}</button>`;
   },
   report(step) {
@@ -839,7 +834,7 @@ const SHEETS = {
       <p class="hint">Departs ${o.departs} · ${esc(o.platform)}</p>
       ${n ? `<p class="form-label">Which carriage?</p><div class="car-pick">${Array.from({ length: n }, (_, i) => `<button class="${f.car === i + 1 ? "active" : ""}" data-act="r-car" data-car="${i + 1}">${i + 1}</button>`).join("")}</div>` : `<p class="hint">Buses don't have carriages; your report applies to the whole bus.</p>`}
       <p class="form-label">What's the problem?</p>
-      <div class="cat-pick">${cats.map(c => `<button class="chip${f.cat === c ? " active" : ""}" data-act="r-cat" data-cat="${c}"><i>${f.cat === c ? ICON.check : ""}</i>${c}</button>`).join("")}</div>
+      <div class="cat-pick">${cats.map(c => `<button class="chip single${f.cat === c ? " active" : ""}" role="radio" aria-checked="${f.cat === c}" data-act="r-cat" data-cat="${c}"><i>${f.cat === c ? ICON.check : ""}</i>${c}</button>`).join("")}</div>
       <label class="field"><span>Comment (optional)</span><textarea id="r-note" rows="2" placeholder="e.g. Seats in the middle section are wet">${esc(f.note || "")}</textarea></label>
       <p class="hint">Reports are labelled as passenger reports and kept separate from operator information.</p>
       <div class="sheet-actions"><button class="btn primary full" data-act="r-submit" ${f.cat && (f.car || !n) ? "" : "disabled"}>Send report</button><button class="btn ghost full" data-act="close-sheet">Cancel</button></div>`;
@@ -850,13 +845,13 @@ const SHEETS = {
     const msg = `I'm taking the ${o.departs} ${o.service.split(" · ")[0]} from ${d.from}. Estimated arrival at ${d.to}: ${o.arrives}.`;
     return `<p class="overline">SHARE JOURNEY</p><h3>Let someone know when you'll arrive</h3>
       <p class="form-label">Share with</p>
-      <div class="cat-pick">${["Mum", "Sam (manager)", "Copy link"].map(x => `<button class="chip${to === x ? " active" : ""}" data-act="s-to" data-to="${x}"><i>${to === x ? ICON.check : ""}</i>${x}</button>`).join("")}</div>
+      <div class="cat-pick">${["Mum", "Sam (manager)", "Copy link"].map(x => `<button class="chip single${to === x ? " active" : ""}" role="radio" aria-checked="${to === x}" data-act="s-to" data-to="${x}"><i>${to === x ? ICON.check : ""}</i>${x}</button>`).join("")}</div>
       <p class="form-label">What to share</p>
       <div class="radio-list">
         <button class="${live ? "" : "active"}" data-act="s-live" data-live="0"><i></i><span><strong>Arrival time once</strong><small>A one-off message with your route and estimated arrival.</small></span></button>
         <button class="${live ? "active" : ""}" data-act="s-live" data-live="1"><i></i><span><strong>Live arrival updates</strong><small>Updates when your estimated arrival changes or you switch route. Shares progress by stop, not your exact location.</small></span></button>
       </div>
-      ${live ? `<p class="form-label">For how long?</p><div class="cat-pick">${["Until I arrive", "30 min", "1 hour"].map(x => `<button class="chip${until === x ? " active" : ""}" data-act="s-until" data-until="${x}"><i>${until === x ? ICON.check : ""}</i>${x}</button>`).join("")}</div>` : ""}
+      ${live ? `<p class="form-label">For how long?</p><div class="cat-pick">${["Until I arrive", "30 min", "1 hour"].map(x => `<button class="chip single${until === x ? " active" : ""}" role="radio" aria-checked="${until === x}" data-act="s-until" data-until="${x}"><i>${until === x ? ICON.check : ""}</i>${x}</button>`).join("")}</div>` : ""}
       <div class="msg-preview"><small>Preview</small><p>${esc(msg)}${live ? " You'll get updates if this changes." : ""}</p></div>
       <div class="sheet-actions"><button class="btn primary full" data-act="s-send">${live ? "Start sharing" : "Send"}</button><button class="btn ghost full" data-act="close-sheet">Cancel</button></div>`;
   },
@@ -907,7 +902,7 @@ function journeyForm(mode) {
     return `<span class="saved-ok">${ICON.check}</span><p class="overline">JOURNEY SAVED</p><h3>${esc(j.from)} → ${esc(j.to)}</h3>
       <p class="sheet-lede">${j.ret ? "Return trip included. " : ""}You can use it from Today any time.</p>
       <div class="next-q"><strong>Do you travel this regularly?</strong><p>Add days and times, and Waywise will suggest it on Today and alert you to changes before you leave.</p></div>
-      <div class="sheet-actions"><button class="btn primary full" data-act="sched-open" data-id="${j.id}">Add to schedule</button><button class="btn ghost full" data-act="close-sheet">Not now</button></div>`;
+      <div class="sheet-actions"><button class="btn primary full" data-act="sched-open" data-id="${j.id}">Add to schedule</button><button class="btn link full" data-act="use-leg" data-leg="${j.id}:out">Show routes now</button><button class="btn ghost full" data-act="close-sheet">Not now</button></div>`;
   }
   if (mode === "sched") {
     const j = state.journeys.find(x => x.id === f.id), had = hasSchedule(j);
@@ -981,11 +976,11 @@ function journeyForm(mode) {
       <div class="sheet-actions"><button class="btn primary full danger-fill" data-act="f-delete">Delete journey</button>${cancel}</div>`;
   }
   if (mode === "edit-today") {
-    return `<p class="overline">TODAY ONLY</p><h3>Time for this journey</h3>
+    return `<p class="overline">THIS JOURNEY ONLY</p><h3>Time for this journey</h3>
       <div class="field-row"><label class="field"><span>Leave at</span><input type="time" data-f="time" value="${pad(f.time)}"></label><label class="field"><span>Arrive by (optional)</span><input type="time" data-f="arriveBy" value="${pad(f.arriveBy)}"></label></div>
-      <p class="scope-note">Only today's trip changes. Your saved journey and schedule stay the same.</p>
+      <p class="scope-note">Only this journey changes. Your saved journey and schedule stay the same.</p>
       ${err}
-      <div class="sheet-actions"><button class="btn primary full" data-act="f-save-today">Use for today</button>${state.today?.time ? `<button class="btn link full" data-act="f-now">Leave now</button>` : ""}${state.today ? `<button class="btn link full" data-act="f-clear-today">Go back to the saved journey</button>` : ""}<button class="btn ghost full" data-act="close-sheet">Cancel</button></div>`;
+      <div class="sheet-actions"><button class="btn primary full" data-act="f-save-today">Use for this journey</button>${state.today?.time ? `<button class="btn link full" data-act="f-now">Leave now</button>` : ""}${state.today && current()?.L.key ? `<button class="btn link full" data-act="f-clear-today">Go back to the saved journey</button>` : ""}<button class="btn ghost full" data-act="close-sheet">Cancel</button></div>`;
   }
   return "";
 }
@@ -1063,8 +1058,8 @@ const A = {
   pref: b => { const k = b.dataset.pref; state.prefs.has(k) ? state.prefs.delete(k) : state.prefs.add(k); renderAll(); refreshSheet(); },
   "more-prefs": () => { state.showMore = !state.showMore; renderToday(); },
   "reset-prefs": () => { state.prefs = new Set(state.prefDefault); renderAll(); refreshSheet(); },
-  "save-default": () => { state.prefDefault = new Set(state.prefs); renderAll(); refreshSheet(); toast("Saved as default", "These preferences now apply everywhere."); },
-  "pref-def": b => { const k = b.dataset.pref; const on = state.prefDefault.has(k); on ? state.prefDefault.delete(k) : state.prefDefault.add(k); on ? state.prefs.delete(k) : state.prefs.add(k); renderAll(); },
+  "save-default": () => { state.prefDefault = new Set(state.prefs); renderAll(); refreshSheet(); toast("Saved for next time", "Every journey now starts with these preferences."); },
+  "pref-def": b => { const k = b.dataset.pref; const on = state.prefDefault.has(k); on ? state.prefDefault.delete(k) : state.prefDefault.add(k); on ? state.prefs.delete(k) : state.prefs.add(k); renderAll(); toast("Saved", "Your usual preferences are saved to your account."); },
   "prefer-ontime": () => { state.prefs.delete("seat"); state.prefs.add("sooner"); renderToday(); },
   method: () => openSheet("method"),
   certainty: () => openSheet("certainty"),
@@ -1132,7 +1127,7 @@ const A = {
     closeSearch();
     if (match) { useLeg(match.key); return; }
     state.leg = null; resetJourneyState(); state.today = { from, to }; setTab("today");
-    toast("Route for today only", "Not saved. Use Save as journey to keep it.");
+    toast("Route for this journey only", "Not saved. Use Save as journey to keep it.");
   },
   "save-adhoc": () => { const d = current(); state.form = { from: d.from, to: d.to, name: "", out: "", hasRet: false, days: [] }; openSheet("form", "add"); },
   "swap-dir": () => {
@@ -1142,7 +1137,7 @@ const A = {
     state.today = { ...(state.today || {}), from: d.to, to: d.from };
     if (L.key && state.today.from === L.from && state.today.to === L.to && !state.today.time && !state.today.arriveBy) state.today = null;
     state.selected = null; state.phase = "options"; renderToday();
-    toast("Swapped for today", "Your saved journey is unchanged.");
+    toast("Swapped for this journey", L.key ? "Your saved journey is unchanged." : "");
   },
   jview: b => { state.jview = b.dataset.view; renderJourneys(); },
   "sched-day": b => { state.schedDay = b.dataset.day; renderJourneys(); },
@@ -1242,7 +1237,7 @@ const A = {
     state.today = Object.keys(t).some(k => t[k]) ? t : null;
     state.selected = null; state.phase = "options";
     closeSheet(); renderAll();
-    toast("Changed for today", "Your saved journey is unchanged.");
+    toast("Changed for this journey", "Your saved journey is unchanged.");
   },
   "f-now": () => {
     const t = { ...(state.today || {}) }; delete t.time;
