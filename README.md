@@ -25,7 +25,7 @@ Source: Evelyn's synthesis in `a2-deliverables/03-usability-evaluation/synthesis
 | R6 | Today opens on the journey from that day's schedule, labelled "Based on your Wednesday schedule, we recommend". No schedule for the day (or "No commute" / skipped) → empty From/To card. From/To card with swap button and Leave / Arrive by; tapping From/To opens a full-height **Change journey** layer (type a route, or tap today's or other saved journeys) without reloading Today | Today |
 | R7 | Separate scopes: Edit today's journey / Edit saved journey / Edit this occurrence / Edit recurring schedule, with matching titles and Save labels | Sheets |
 | R8 | Select route → brief confirmation → **Journey details** → Start journey → active journey | Today, details, active |
-| R9 | "Preferences ▾" under "What should I do?" opens a sheet listing every option with "Select all that apply" and check marks; active choices are shown next to it | Today |
+| R9 | Quick preferences stay on Today ("Tune this journey"): "Arrive sooner", "Prioritise a seat", "Select all that apply · applies to this journey only", check marks, Reset; less-used options under "More preferences" | Today |
 | R10 | Today's choices apply to this journey only; explicit "Save as default"; Reset | Today, Profile |
 | R11 | More preferences: less waiting, predictable arrival, transport modes | Today, Profile |
 | R12 | Wait / Departs / Arrives shown separately; "9 min later than the next train" | Route cards |

@@ -357,16 +357,25 @@ function renderToday() {
       <div><span class="source">${esc(d.alert.source)}</span><strong>${esc(d.alert.title)}</strong><p>${esc(d.alert.copy)}</p><small>Updated ${d.alert.updated} · next update ${d.alert.next}</small></div>
     </div>
 
+    <section class="block">
+      <div class="section-heading">
+        <div><p class="overline">WHAT MATTERS ON THIS JOURNEY?</p><h3>Tune this journey</h3></div>
+        <button class="btn link sm" data-act="reset-prefs" ${np ? "" : "disabled"}>Reset</button>
+      </div>
+      <p class="hint">Select all that apply · applies to this journey only</p>
+      <div class="chips">${PREFS.map(prefChip).join("")}${state.showMore ? MORE_PREFS.map(prefChip).join("") : ""}
+        <button class="chip more" data-act="more-prefs">${state.showMore ? "Fewer preferences" : "More preferences"}</button></div>
+      <div class="pref-scope">
+        ${np ? `<span>For this journey: <b>${[...state.prefs].map(prefLabel).join(" · ")}</b></span><button class="btn link sm" data-act="save-default">Save as default</button>`
+      : `<span>Using your default travel preferences</span><button class="btn link sm" data-act="tab" data-tab="profile">View defaults</button>`}
+      </div>
+    </section>
+
     <section class="block results">
       <div class="section-heading">
         <div><p class="overline">YOUR OPTIONS</p><h3>What should I do?</h3></div>
         <button class="info-button" data-act="method" aria-label="How recommendations work">?</button>
       </div>
-      <div class="pref-bar">
-        <button class="fchip${np ? " on" : ""}" data-act="prefs">${ICON.compare} Preferences${np ? ` · ${np}` : ""} ▾</button>
-        <span>${np ? `For this journey: <b>${[...state.prefs].map(prefLabel).join(" · ")}</b>` : "Using your default travel preferences"}</span>
-      </div>
-      ${np ? `<button class="btn link sm save-default-link" data-act="save-default">Save as default</button>` : ""}
       <div class="confidence-line">
         <button class="certainty" data-act="certainty"><i class="c-${certainty(d.confidence).toLowerCase()}"></i>Arrival estimate confidence: <b>${certainty(d.confidence)}</b> ⓘ</button>
         <span>Live data · updated ${d.alert.updated}</span>
