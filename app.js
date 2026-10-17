@@ -160,7 +160,7 @@ function generic(from, to, clock) {
 const DEFAULTS = { time: 9, seat: 5, crowd: 5, reliability: 9, walk: 5, transfer: 5, wait: 5, modes: { train: true, metro: true, bus: true, ferry: true, lightrail: true } };
 const state = {
   scenario: "disruption", journeys: clone(SEED_JOURNEYS), leg: "work:out", day: "wed", clock: "17:45",
-  prefs: new Set(SEED_PREFS), showMore: false, selected: null, phase: "options", stage: 0, tab: "today", overlay: null,
+  prefs: new Set(SEED_PREFS), prefDefault: new Set(SEED_PREFS), showMore: false, selected: null, phase: "options", stage: 0, tab: "today", overlay: null,
   jview: "list", schedDay: "wed", occ: clone(SEED_OCC), noCommute: new Set(),
   defaults: clone(DEFAULTS), savedDefaults: clone(DEFAULTS), alertsOn: true, sharing: null, reports: [],
   today: null, reminder: null, locPerm: null, learn: true, actionable: true, sheet: null, form: {}, pview: "home"
@@ -459,7 +459,6 @@ const ACTION_PHRASE = { take: "take this train", wait: "wait for this one", swit
 const actionPhrase = o => (o.mode === "bus" ? "take the bus" : ACTION_PHRASE[o.kind] || "take this one");
 function routeCard(o, d, rec) {
   const isRec = o.id === rec.id, live = state.phase === "active" && o.id === state.selected, late = lateBy(o, d), p = state.prefs;
-  const f = on => (on ? " focus" : "");
   const conf = conflicts(o, d).filter(c => !c.startsWith("Arrives"));
   const kind = { take: ICON.go, wait: ICON.clock, switch: ICON.swap, bus: ICON.swap }[o.kind] || ICON.go;
   const strip = live ? `<div class="rec-strip live-strip"><span class="pulse"></span>In progress · ${STAGES[state.stage]}</div>`
@@ -476,15 +475,15 @@ function routeCard(o, d, rec) {
           ${legChain(o)}
           <h4><i class="kind-ic">${kind}</i>${esc(o.title)}</h4>
         </div>
-        <div class="rc-arrive${f(p.has("sooner"))}"><small>Arrives</small><strong class="${o.arrives.length > 5 ? "range" : ""}${late ? " late" : ""}">${o.arrives}</strong>${late ? `<em class="late">${late} min late</em>` : d.target ? `<em class="ontime">On time</em>` : "<em>estimate</em>"}</div>
+        <div class="rc-arrive"><small>Arrives</small><strong class="${o.arrives.length > 5 ? "range" : ""}${late ? " late" : ""}">${o.arrives}</strong>${late ? `<em class="late">${late} min late</em>` : d.target ? `<em class="ontime">On time</em>` : "<em>estimate</em>"}</div>
       </div>
       ${mid}
       <div class="rc-status">
-        <span class="st crowd-${o.crowd}${f(p.has("seat"))}">${CROWD[o.crowd]} crowding</span>
-        <span class="st ${seatTone(o.seat)}${f(p.has("seat"))}">${SEAT[o.seat]}</span>
-        <span class="st ${relTone(o.reliability)}${f(p.has("reliable"))}">${o.reliability}% on time</span>
-        ${p.has("walk") ? `<span class="st focus">${o.walk} min walk</span>` : ""}
-        ${p.has("transfer") ? `<span class="st focus">${o.transfers ? `${o.transfers} transfer` : "Direct"}</span>` : ""}
+        <span class="st crowd-${o.crowd}">${CROWD[o.crowd]} crowding</span>
+        <span class="st ${seatTone(o.seat)}">${SEAT[o.seat]}</span>
+        <span class="st ${relTone(o.reliability)}">${o.reliability}% on time</span>
+        ${p.has("walk") ? `<span class="st">${o.walk} min walk</span>` : ""}
+        ${p.has("transfer") ? `<span class="st">${o.transfers ? `${o.transfers} transfer` : "Direct"}</span>` : ""}
       </div>
       ${conf.length ? `<p class="conflict">${ICON.warn}<span>${esc(conf[0])}</span></p>` : ""}
       <div class="rc-foot">
@@ -588,9 +587,9 @@ const profileSub = (title, body) => `
     <div><p class="overline">PROFILE</p><h2>${title}</h2></div>
   </header>${body}`;
 function profilePrefs() {
-  const row = p => { const on = state.prefs.has(p.id); return `<button class="pref-row${on ? " on" : ""}" data-act="pref" data-pref="${p.id}" role="checkbox" aria-checked="${on}"><i>${on ? ICON.check : ""}</i><span>${p.label}</span></button>`; };
+  const row = p => { const on = state.prefDefault.has(p.id); return `<button class="pref-row${on ? " on" : ""}" data-act="pref-def" data-pref="${p.id}" role="checkbox" aria-checked="${on}"><i>${on ? ICON.check : ""}</i><span>${p.label}</span></button>`; };
   return profileSub("Travel preferences", `
-    <p class="hint">What matters when routes are ranked. The same preferences apply on every journey — you can also change them from Today.</p>
+    <p class="hint">Your default preferences, used for every journey. Quick changes on Today don't change these unless you save them as default.</p>
     <article class="pref-group"><div class="pref-list">${[...PREFS, MORE_PREFS[0]].map(row).join("")}</div></article>
     <div class="pref-card"><strong>Transport modes</strong><small>Turn off modes you'd rather not use. We'll explain if no route avoids them.</small>
       <div class="mode-chips">${MODES.map(([k, l]) => `<button class="chip${state.defaults.modes[k] ? " active" : ""}" data-act="mode" data-mode="${k}" role="checkbox" aria-checked="${state.defaults.modes[k]}"><i>${state.defaults.modes[k] ? ICON.check : ""}</i>${l}</button>`).join("")}</div>
@@ -611,9 +610,9 @@ function renderProfile() {
     <header class="app-header"><div><p class="overline">PROFILE &amp; ACCOUNT</p><h2>Alex</h2></div><span class="avatar big">AL</span></header>
     <article class="account-card">
       <div class="acc-row">${ICON.cloud}<div><strong>Saved to your account</strong><small>alex.commuter@email.com · syncs across your devices</small></div></div>
-      <button class="row-link" data-act="tab" data-tab="journeys"><span>Saved journeys</span><b>${state.journeys.length}</b><i>›</i></button>
-      <button class="row-link" data-act="pview" data-view="prefs"><span>Travel preferences</span><b>${state.prefs.size ? [...state.prefs].slice(0, 2).map(prefLabel).join(", ") + (state.prefs.size > 2 ? ` +${state.prefs.size - 2}` : "") : "Not set"}</b><i>›</i></button>
-      <button class="row-link" data-act="pview" data-view="alerts"><span>Alerts &amp; notifications</span><b>${state.actionable ? "Actionable only" : "All"}</b><i>›</i></button>
+      <button class="row-link" data-act="tab" data-tab="journeys"><span>Saved journeys</span><i>›</i></button>
+      <button class="row-link" data-act="pview" data-view="prefs"><span>Travel preferences</span><i>›</i></button>
+      <button class="row-link" data-act="pview" data-view="alerts"><span>Alerts &amp; notifications</span><i>›</i></button>
     </article>
     <section class="block demo-only">
       <p class="overline">PROTOTYPE</p>
@@ -749,14 +748,15 @@ const SHEETS = {
   prefs() {
     const row = p => { const on = state.prefs.has(p.id); return `<button class="pref-row${on ? " on" : ""}" data-act="pref" data-pref="${p.id}" role="checkbox" aria-checked="${on}"><i>${on ? ICON.check : ""}</i><span>${p.label}</span></button>`; };
     const n = state.prefs.size;
+    const dirty = JSON.stringify([...state.prefs].sort()) !== JSON.stringify([...state.prefDefault].sort());
     return `<p class="overline">YOUR PREFERENCES</p><h3>What matters to you?</h3>
-      <p class="hint">Applies to every journey. Change any time, here or in Profile.</p>
+      <p class="hint">Your saved defaults apply everywhere. Changes here affect today's search until you save or reset them.</p>
       <div class="pref-list">${PREFS.map(row).join("")}</div>
       <p class="overline sl-h">MORE</p>
       <div class="pref-list">${MORE_PREFS.map(row).join("")}</div>
       <div class="sheet-actions">
         <button class="btn primary full" data-act="close-sheet">Done${n ? ` · ${n} selected` : ""}</button>
-        ${n ? `<button class="btn link sm" data-act="reset-prefs">Clear all</button>` : ""}
+        ${dirty ? `<div class="split"><button class="btn link sm" data-act="reset-prefs">Back to default</button><button class="btn link sm" data-act="save-default">Save as default</button></div>` : ""}
       </div>`;
   },
   switchConfirm(id) {
@@ -949,7 +949,7 @@ function renderAll() {
 function setTab(tab) { state.tab = tab; state.overlay = null; show(); $(`#screen-${tab}`).scrollTop = 0; }
 function openOverlay(name) { state.overlay = name; show(); $(`#screen-${name}`).scrollTop = 0; }
 
-function resetJourneyState() { state.selected = null; state.preview = null; state.phase = "options"; state.stage = 0; state.today = null; state.sharing = null; state.reports = []; state.overlay = null; }
+function resetJourneyState() { state.prefs = new Set(state.prefDefault); state.selected = null; state.preview = null; state.phase = "options"; state.stage = 0; state.today = null; state.sharing = null; state.reports = []; state.overlay = null; }
 /* If today's suggested journey is skipped or the day is marked "No commute", Today goes back to an empty card. */
 function syncSuggestion() {
   if (state.leg && state.leg === state.suggested && !state.today && !scheduledToday(state.day).some(l => l.key === state.leg && !l.skip)) { state.leg = null; state.suggested = null; resetJourneyState(); }
@@ -966,7 +966,7 @@ function setScenario(id) {
   id = SCN_ALIAS[id] || id;
   if (id !== "newuser" && !S[id]) return;
   state.scenario = id; resetJourneyState();
-  state.occ = clone(SEED_OCC); state.noCommute = new Set(); state.form = {}; state.pview = "home"; state.prefs = id === "newuser" ? new Set() : new Set(SEED_PREFS);
+  state.occ = clone(SEED_OCC); state.noCommute = new Set(); state.form = {}; state.pview = "home"; state.prefDefault = id === "newuser" ? new Set() : new Set(SEED_PREFS); state.prefs = new Set(state.prefDefault);
   if (id === "newuser") { state.journeys = []; state.leg = null; state.day = "tue"; state.clock = "08:40"; state.schedDay = "tue"; }
   else { const s = S[id]; state.journeys = clone(SEED_JOURNEYS); state.day = s.day; state.leg = scheduledToday(s.day).some(l => l.key === s.leg && !l.skip) ? s.leg : null; state.suggested = state.leg; state.clock = s.clock; state.schedDay = s.day; }
   $$(".demo-notes .scenario").forEach(b => b.classList.toggle("active", b.dataset.scenario === id));
@@ -981,7 +981,9 @@ const A = {
   "close-sheet": () => closeSheet(),
   pref: b => { const k = b.dataset.pref; state.prefs.has(k) ? state.prefs.delete(k) : state.prefs.add(k); renderAll(); refreshSheet(); },
   "more-prefs": () => { state.showMore = !state.showMore; renderToday(); },
-  "reset-prefs": () => { state.prefs = new Set(); renderToday(); refreshSheet(); },
+  "reset-prefs": () => { state.prefs = new Set(state.prefDefault); renderAll(); refreshSheet(); },
+  "save-default": () => { state.prefDefault = new Set(state.prefs); renderAll(); refreshSheet(); toast("Saved as default", "These preferences now apply everywhere."); },
+  "pref-def": b => { const k = b.dataset.pref; const on = state.prefDefault.has(k); on ? state.prefDefault.delete(k) : state.prefDefault.add(k); on ? state.prefs.delete(k) : state.prefs.add(k); renderAll(); },
   "prefer-ontime": () => { state.prefs.delete("seat"); state.prefs.add("sooner"); renderToday(); },
   method: () => openSheet("method"),
   certainty: () => openSheet("certainty"),
