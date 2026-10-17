@@ -377,18 +377,14 @@ function renderToday() {
     <section class="block results">
       <div class="section-heading">
         <h3>Route options</h3>
-        <button class="info-button" data-act="method" aria-label="How recommendations work">?</button>
+        <button class="conf-pill" data-act="certainty"><i class="c-${certainty(d.confidence).toLowerCase()}"></i>${certainty(d.confidence)} confidence</button>
       </div>
       ${prefBar}
-      ${np ? `<p class="pref-note">For this journey only · <button class="btn link sm" data-act="save-default">Save as default</button> · <button class="btn link sm" data-act="reset-prefs">Reset</button></p>` : `<p class="pref-note">Using your default travel preferences · <button class="btn link sm" data-act="tab" data-tab="profile">View defaults</button></p>`}
+      ${np ? `<p class="pref-note">For this journey only · <button class="btn link sm" data-act="save-default">Save as default</button> · <button class="btn link sm" data-act="reset-prefs">Reset</button></p>` : ""}
       ${d.alert.tone === "green" ? "" : `<div class="alert-card ${d.alert.tone}" role="status">
         <div class="alert-icon">!</div>
         <div><span class="source">${esc(d.alert.source)}</span><strong>${esc(d.alert.title)}</strong><p>${esc(d.alert.copy)}</p><small>Updated ${d.alert.updated} · next update ${d.alert.next}</small></div>
       </div>`}
-      <div class="confidence-line">
-        <button class="certainty" data-act="certainty"><i class="c-${certainty(d.confidence).toLowerCase()}"></i>Arrival estimate confidence: <b>${certainty(d.confidence)}</b> ⓘ</button>
-        <span>Live data · updated ${d.alert.updated}</span>
-      </div>
       ${lateBy(rec, d) && state.prefs.has("seat") ? `<div class="tradeoff-banner"><b>Trade-off:</b> ${esc(rec.title.toLowerCase())} is more comfortable but arrives <b>${lateBy(rec, d)} min after</b> your ${d.target} ${d.targetLabel}.<button class="btn link sm" data-act="prefer-ontime">Prioritise on-time arrival</button></div>` : ""}
       <div class="route-options">${d.options.map(o => routeCard(o, d, rec)).join("")}</div>
     </section>
@@ -758,6 +754,7 @@ const SHEETS = {
       <div class="pref-list">${PREFS.map(row).join("")}</div>
       <p class="overline sl-h">MORE PREFERENCES</p>
       <div class="pref-list">${MORE_PREFS.map(row).join("")}</div>
+      <button class="btn link sm" data-act="method">How recommendations work ›</button>
       <div class="sheet-actions">
         <button class="btn primary full" data-act="close-sheet">${n ? `Show options · ${n} selected` : "Show options"}</button>
         <div class="split"><button class="btn link sm" data-act="reset-prefs" ${n ? "" : "disabled"}>Reset</button><button class="btn link sm" data-act="save-default" ${n ? "" : "disabled"}>Save as default</button></div>
