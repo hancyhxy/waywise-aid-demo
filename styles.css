@@ -132,6 +132,23 @@ b,strong { font-weight:650; }
 .preset.active { border:2px solid var(--accent); padding:9px 11px; background:var(--accent-soft); }
 .preset.active b,.preset.active em { color:var(--accent-ink); }
 .preset.add { width:auto; display:flex; align-items:center; gap:6px; color:var(--accent); border-style:dashed; font-size:13px; font-weight:650; }
+.mood { margin:-8px 2px 14px; color:#41454b; font-size:14px; line-height:1.45; }
+.search-card.editing { border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft); }
+.od-field input { display:block; width:100%; min-width:0; margin-top:1px; padding:0; border:0; outline:0; background:none; font-size:17px; font-weight:650; color:var(--ink); }
+.od-field input::placeholder { color:var(--faint); font-weight:600; }
+label.od-field { cursor:text; }
+.od-field span { flex:1; }
+.s-go { margin-top:10px; }
+.saved-list { display:grid; gap:8px; }
+.saved-item { display:flex; align-items:center; gap:11px; width:100%; padding:11px 13px; border:1px solid var(--line); border-radius:14px; background:#fff; text-align:left; }
+.saved-item[hidden] { display:none; }
+.si-icon { flex:none; width:34px; height:34px; display:grid; place-items:center; border-radius:10px; background:var(--accent-soft); color:var(--accent); }
+.si-main { flex:1; min-width:0; }
+.si-main b,.si-main small { display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.si-main b { font-size:14px; }
+.si-main small { margin-top:2px; color:var(--muted); font-size:12.5px; }
+.si-when { flex:none; color:var(--muted); font-size:11.5px; font-weight:650; text-align:right; line-height:1.35; }
+.no-match { margin:4px 2px; color:var(--muted); font-size:12.5px; }
 .alert-card { display:flex; gap:11px; margin-top:12px; padding:13px 14px; border:1px solid var(--line); border-radius:var(--radius); background:#fff; }
 .alert-icon { flex:none; width:28px; height:28px; display:grid; place-items:center; border-radius:9px; background:var(--red); color:#fff; font-weight:800; }
 .alert-card.amber .alert-icon { background:var(--amber); }

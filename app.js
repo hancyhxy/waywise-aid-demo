@@ -63,16 +63,15 @@ const daysText = days => DAYS.filter(d => days.includes(d)).map(d => DAY_NAME[d]
 
 /* Saved journeys: route first; name, usual time, return and schedule are optional (R1–R4). */
 const SEED_JOURNEYS = [
-  { id: "uni", from: "Wollstonecraft", to: "UTS (Central)", name: "University", out: "09:05", ret: { from: "UTS (Central)", to: "Wollstonecraft", time: "17:30" }, days: ["mon", "tue", "thu"] },
-  { id: "work", from: "UTS (Central)", to: "Chatswood", name: "Wednesday shift", out: "17:45", ret: { from: "Chatswood", to: "Wollstonecraft", time: "21:30" }, days: ["wed"] },
-  { id: "fri", from: "Wollstonecraft", to: "Chatswood", name: "Friday shift", out: "12:30", ret: { from: "Chatswood", to: "Wollstonecraft", time: "19:20" }, days: ["fri"] },
-  { id: "quay", from: "Wollstonecraft", to: "Circular Quay", name: "", out: "", ret: null, days: [] }
+  { id: "uni", from: "UTS (Central)", to: "Wollstonecraft", name: "After uni", out: "17:30", ret: null, days: ["mon", "tue", "thu"] },
+  { id: "work", from: "UTS (Central)", to: "Chatswood", name: "Work shift", out: "17:45", ret: null, days: ["wed"] },
+  { id: "home", from: "Chatswood", to: "Wollstonecraft", name: "Home from work", out: "19:20", ret: null, days: ["fri"] }
 ];
 
 /* Scenarios follow the team's scenario cards (same content as mid-fi), with richer service detail. */
 const S = {
   capacity: {
-    num: 1, label: "Comfortable journey home", leg: "uni:ret", day: "tue", clock: "17:30",
+    num: 1, label: "Comfortable journey home", leg: "uni:out", day: "tue", clock: "17:30", copy: "Classes are done. Let's find you a comfortable ride home.",
     overline: "TUESDAY · AFTER UNI", greeting: "Evening, Alex", target: "18:05", targetLabel: "arrive-by time",
     alert: { tone: "amber", source: "Waywise prediction", title: "Peak-hour crowding at Central", copy: "North Shore trains are expected to be very full until about 18:00.", updated: "1 min ago", next: "17:35" },
     confidence: 74, why: "Peak-hour loads are predictable, but a held train can change crowding quickly.",
@@ -83,7 +82,7 @@ const S = {
     ]
   },
   disruption: {
-    num: 2, label: "Getting to work on time", leg: "work:out", day: "wed", clock: "17:45",
+    num: 2, label: "Getting to work on time", leg: "work:out", day: "wed", clock: "17:45", copy: "Uni ran late and your shift starts at 18:30.",
     overline: "WEDNESDAY · TO WORK", greeting: "Evening, Alex", target: "18:30", targetLabel: "shift start",
     alert: { tone: "red", source: "Operator update · Sydney Trains", title: "North Shore Line disruption", copy: "Reduced service is making platforms more crowded. Recovery time unknown.", updated: "2 min ago", next: "18:00" },
     confidence: 76, why: "Reduced frequency makes departures and crowding less certain than usual.",
@@ -94,7 +93,7 @@ const S = {
     ]
   },
   normal: {
-    num: 3, label: "Disruption on the way home", leg: "fri:ret", day: "fri", clock: "19:20",
+    num: 3, label: "Disruption on the way home", leg: "home:out", day: "fri", clock: "19:20", copy: "Shift's over, but your usual line is delayed.",
     overline: "FRIDAY · HEADING HOME", greeting: "Evening, Alex", target: "19:55", targetLabel: "arrive-by time",
     alert: { tone: "red", source: "Operator update · Sydney Trains", title: "Delays on your usual line", copy: "Trains delayed after an incident at Artarmon. Expected delay 20+ min; recovery time unknown.", updated: "1 min ago", next: "19:30" },
     confidence: 62, why: "The incident is still being managed, so delay estimates may change at the next update.",
@@ -105,7 +104,7 @@ const S = {
     ]
   }
 };
-const LEG_SCN = { "uni:ret": "capacity", "work:out": "disruption", "fri:ret": "normal" };
+const LEG_SCN = { "uni:out": "capacity", "work:out": "disruption", "home:out": "normal" };
 const SCN_ALIAS = { "0": "newuser", "1": "capacity", "2": "disruption", "3": "normal" };
 
 /* Generic options for journeys without a scripted scenario (e.g. a newly added journey). */
@@ -161,10 +160,19 @@ function current() {
   const sid = LEG_SCN[state.leg];
   const routeChanged = from !== L.from || to !== L.to;
   const usual = L.time && toMin(L.time) > toMin(state.clock) ? fmt(toMin(L.time)) : state.clock;
-  const base = sid && !routeChanged && S[sid].day === state.day ? S[sid] : generic(from, to, state.today?.time ? fmt(toMin(state.today.time)) : usual);
+  const leave = state.today?.time ? fmt(toMin(state.today.time)) : sid === state.scenario ? S[sid].clock : usual;
+  const base = sid && !routeChanged ? shifted(S[sid], leave) : generic(from, to, leave);
   const target = state.today?.arriveBy || base.target;
   return { ...base, from, to, L, target, targetLabel: state.today?.arriveBy ? "arrive-by time" : base.targetLabel };
 }
+/* Same scripted service pattern, moved to another leave time (prototype data only). */
+function shifted(base, leave) {
+  const dt = toMin(leave) - toMin(base.clock);
+  if (!dt) return base;
+  const sh = t => t.split("–").map(x => fmt(toMin(x) + dt)).join("–");
+  return { ...base, target: base.target ? sh(base.target) : null, options: base.options.map(o => ({ ...o, leaveBy: sh(o.leaveBy), departs: sh(o.departs), arrives: sh(o.arrives) })) };
+}
+const greet = c => (toMin(c) < 720 ? "Morning, Alex" : toMin(c) < 1020 ? "Afternoon, Alex" : "Evening, Alex");
 const lateBy = (o, d) => (d.target ? Math.max(0, arrEnd(o) - toMin(d.target)) : 0);
 const platformWait = o => Math.max(0, toMin(o.departs) - toMin(o.leaveBy) - o.walkTo);
 const totalMin = o => arrEnd(o) - toMin(o.leaveBy);
@@ -278,39 +286,39 @@ function prefChip(p) {
 function renderToday() {
   const el = $("#screen-today"), d = current();
   $("#clock").textContent = state.clock;
-  if (!d) { el.innerHTML = state.journeys.length ? renderNoRoute() : renderFirstRun(); scrollPresets(); return; }
+  if (state.search || (!d && state.journeys.length)) { el.innerHTML = renderSearch(); return; }
+  if (!d) { el.innerHTML = renderFirstRun(); return; }
   const rank = ranked(d), rec = rank[0];
   const L = d.L, ret = L.dir === "out" ? (L.j.ret ? `${L.j.id}:ret` : null) : `${L.j.id}:out`;
   const sched = scheduledToday(state.day).find(x => x.key === state.leg && !x.skip);
-  const suggestion = state.today ? `<p class="suggest today"><span>${L.key ? "Changed for today only" : "Route for today only"}</span>${L.key ? `<button class="btn link sm" data-act="f-clear-today">Back to saved journey</button>` : ""}</p>`
-    : sched && state.leg === state.suggested ? `<p class="suggest">${ICON.check}<span>Suggested · usual ${DAY_NAME[state.day].slice(0, 3)}${sched.time ? ` ${fmt(toMin(sched.time))}` : ""}</span><button class="btn link sm" data-act="not-now">Not now</button></p>`
-      : `<p class="suggest"><span>Saved journey${L.j.name ? ` · ${esc(L.j.name)}` : ""}</span></p>`;
+  const suggestion = state.today ? `<p class="suggest today"><span>${L.key ? "Changed for today only" : "Route for today only"}</span>${L.key ? `<button class="btn link sm" data-act="f-clear-today">Back to saved journey</button>` : `<button class="btn link sm" data-act="save-adhoc">Save</button><button class="btn link sm" data-act="s-clear">Clear ×</button>`}</p>`
+    : sched && state.leg === state.suggested ? `<p class="suggest">${ICON.check}<span>Suggested · usual ${DAY_NAME[state.day].slice(0, 3)}${sched.time ? ` ${fmt(toMin(sched.time))}` : ""}</span><button class="btn link sm" data-act="s-clear">Clear ×</button></p>`
+      : `<p class="suggest"><span>Saved journey${L.j.name ? ` · ${esc(L.j.name)}` : ""}</span><button class="btn link sm" data-act="s-clear">Clear ×</button></p>`;
   const legs = allLegs();
   const active = state.phase === "active" ? selectedOption(d) : null;
   const sharing = state.sharing && state.sharing.live ? `<div class="share-banner">${ICON.share}<span>Sharing arrival updates with <b>${esc(state.sharing.to)}</b> · ${esc(state.sharing.until)}</span><button class="btn link sm" data-act="stop-share">Stop</button></div>` : "";
 
   el.innerHTML = `
     <header class="app-header">
-      <div><p class="overline">${esc(d.overline)}</p><h2>${esc(d.greeting)}</h2></div>
+      <div><p class="overline">${DAY_NAME[state.day].toUpperCase()} · ${state.clock}</p><h2>${greet(state.clock)}</h2></div>
       <button class="avatar" data-act="tab" data-tab="profile" aria-label="Open Profile and account">AL</button>
     </header>
+    ${S[state.scenario] && state.leg === S[state.scenario].leg && !state.today ? `<p class="mood">${esc(S[state.scenario].copy)}</p>` : ""}
     ${active ? `<button class="active-banner" data-act="open-active"><span class="pulse"></span><span><b>Journey active</b> · ${esc(active.title)} · arrives ${active.arrives}</span><span aria-hidden="true">›</span></button>` : ""}
     ${sharing}
     ${suggestion}
     <article class="search-card" aria-label="Journey for today">
       <div class="od">
-        <button class="od-field" data-act="edit-today" aria-label="Change start for today"><i class="od-dot from"></i><span><small>From</small><strong>${esc(d.from)}</strong></span></button>
-        <button class="od-field" data-act="edit-today" aria-label="Change destination for today"><i class="od-dot to"></i><span><small>To</small><strong>${esc(d.to)}</strong></span></button>
+        <button class="od-field" data-act="s-open" aria-label="Change route"><i class="od-dot from"></i><span><small>From</small><strong>${esc(d.from)}</strong></span></button>
+        <button class="od-field" data-act="s-open" aria-label="Change route"><i class="od-dot to"></i><span><small>To</small><strong>${esc(d.to)}</strong></span></button>
         <i class="od-line" aria-hidden="true"></i>
-        <button class="swap-fab" data-act="swap-dir" aria-label="${ret ? "Switch to the return trip" : "Swap From and To for today"}">${ICON.swap}</button>
+        <button class="swap-fab" data-act="swap-dir" aria-label="Swap to the return direction">${ICON.swap}</button>
       </div>
       <div class="when">
         <button data-act="edit-today"><small>Leave</small><strong>Today · ${d.options[0] ? fmt(Math.min(...d.options.map(o => toMin(o.leaveBy)))) : state.clock}</strong></button>
         <button data-act="edit-today"><small>${d.targetLabel === "shift start" ? "Shift starts" : "Arrive by"}</small><strong>${d.target || "Any time"}</strong></button>
       </div>
     </article>
-    ${presetsHtml()}
-
     <div class="alert-card ${d.alert.tone}" role="status">
       <div class="alert-icon">${d.alert.tone === "green" ? ICON.check : "!"}</div>
       <div><span class="source">${esc(d.alert.source)}</span><strong>${esc(d.alert.title)}</strong><p>${esc(d.alert.copy)}</p><small>Updated ${d.alert.updated} · next update ${d.alert.next}</small></div>
@@ -343,42 +351,51 @@ function renderToday() {
       <div class="route-options">${d.options.map(o => routeCard(o, d, rec)).join("")}</div>
     </section>
     <p class="data-note">Arrival times, crowding and seat chances are estimates, not guarantees. Always follow official transport advice.</p>`;
-  scrollPresets();
 }
-function presetsHtml() {
-  return `<div class="presets-head"><p class="overline">SAVED JOURNEYS</p><button class="btn link sm" data-act="tab" data-tab="journeys">See all</button></div>
-    <div class="leg-picker" role="group" aria-label="Saved journeys">
-      ${allLegs().map(l => `<button class="preset${l.key === state.leg && !state.today ? " active" : ""}" data-act="use-leg" data-leg="${l.key}">
-        <span class="p-top"><b>${esc(l.j.name || "Saved route")}${l.dir === "ret" ? " · return" : ""}</b>${l.time ? `<em>${fmt(toMin(l.time))}</em>` : ""}</span>
-        <span class="p-route">${esc(l.from)} → ${esc(l.to)}</span></button>`).join("")}
-      <button class="preset add" data-act="add-journey">${ICON.plus}<span>Add journey</span></button>
-    </div>`;
+const norm = x => String(x || "").trim().toLowerCase();
+function savedMatches(q) {
+  const f = norm(q.from), t = norm(q.to);
+  return allLegs().filter(l => (!f || norm(l.from).includes(f)) && (!t || norm(l.to).includes(t)));
 }
-const greet = c => (toMin(c) < 720 ? "Morning, Alex" : toMin(c) < 1020 ? "Afternoon, Alex" : "Evening, Alex");
-function renderNoRoute() {
+function savedItem(l) {
+  return `<button class="saved-item" data-act="use-leg" data-leg="${l.key}" data-from="${esc(norm(l.from))}" data-to="${esc(norm(l.to))}">
+    <span class="si-icon">${ICON.train}</span>
+    <span class="si-main"><b>${esc(l.j.name || "Saved route")}${l.dir === "ret" ? " · return" : ""}</b><small>${esc(l.from)} → ${esc(l.to)}</small></span>
+    <span class="si-when">${l.j.days.length ? `${daysText(l.j.days)}<br>` : ""}${l.time ? fmt(toMin(l.time)) : ""}</span></button>`;
+}
+/* Inline route search (flight-search pattern): type From/To or tap a saved journey. */
+function renderSearch() {
+  if (!state.search) state.search = { from: "", to: "", prev: null };
+  const q = state.search, can = q.from.trim() && q.to.trim();
+  const list = allLegs();
   return `
     <header class="app-header">
       <div><p class="overline">${DAY_NAME[state.day].toUpperCase()} · ${state.clock}</p><h2>${greet(state.clock)}</h2></div>
       <button class="avatar" data-act="tab" data-tab="profile" aria-label="Open Profile and account">AL</button>
     </header>
-    <p class="suggest muted"><span>No journey suggested right now</span></p>
-    <article class="search-card empty" aria-label="Journey for today">
+    <p class="suggest muted"><span>Where are you going?</span>${q.prev ? `<button class="btn link sm" data-act="s-cancel">Cancel</button>` : ""}</p>
+    <article class="search-card editing" aria-label="Choose a route">
       <div class="od">
-        <button class="od-field" data-act="edit-today"><i class="od-dot from"></i><span><small>From</small><strong class="ph">Where from?</strong></span></button>
-        <button class="od-field" data-act="edit-today"><i class="od-dot to"></i><span><small>To</small><strong class="ph">Where to?</strong></span></button>
+        <label class="od-field"><i class="od-dot from"></i><span><small>From</small><input data-s="from" value="${esc(q.from)}" placeholder="Where from?" autocomplete="off"></span></label>
+        <label class="od-field"><i class="od-dot to"></i><span><small>To</small><input data-s="to" value="${esc(q.to)}" placeholder="Where to?" autocomplete="off"></span></label>
         <i class="od-line" aria-hidden="true"></i>
+        <button class="swap-fab" data-act="s-swap" aria-label="Swap From and To">${ICON.swap}</button>
       </div>
       <div class="when">
         <button data-act="edit-today"><small>Leave</small><strong>Today · ${state.clock}</strong></button>
         <button data-act="edit-today"><small>Arrive by</small><strong>Any time</strong></button>
       </div>
     </article>
-    ${presetsHtml()}
-    <p class="data-note">Pick a saved journey or enter a route to see your options and current service conditions.</p>`;
+    <button class="btn primary full s-go" data-act="s-go" ${can ? "" : "disabled"}>Show options</button>
+    <div class="presets-head"><p class="overline">SAVED JOURNEYS · TAP TO USE</p><button class="btn link sm" data-act="add-journey">${ICON.plus} Add</button></div>
+    <div class="saved-list">${list.map(savedItem).join("")}<p class="no-match" hidden>No saved journey matches. Show options to plan this route for today.</p></div>`;
 }
-function scrollPresets() {
-  const row = $("#screen-today .leg-picker"), act = row && row.querySelector(".preset.active");
-  if (row) row.scrollLeft = act ? Math.max(0, row.scrollLeft + act.getBoundingClientRect().left - row.getBoundingClientRect().left - 18) : 0;
+function filterSaved() {
+  const q = state.search; if (!q) return;
+  const f = norm(q.from), t = norm(q.to); let shown = 0;
+  $$("#screen-today .saved-item").forEach(b => { const ok = (!f || b.dataset.from.includes(f)) && (!t || b.dataset.to.includes(t)); b.hidden = !ok; shown += ok; });
+  const nm = $("#screen-today .no-match"); if (nm) nm.hidden = shown > 0;
+  const go = $("#screen-today .s-go"); if (go) go.disabled = !(q.from.trim() && q.to.trim());
 }
 function routeCard(o, d, rec) {
   const isRec = o.id === rec.id, chosen = o.id === state.selected, late = lateBy(o, d), p = state.prefs;
@@ -827,10 +844,10 @@ function renderAll() {
   if (state.overlay === "details") renderDetails();
   if (state.overlay === "active") renderActive();
 }
-function setTab(tab) { state.tab = tab; state.overlay = null; show(); $(`#screen-${tab}`).scrollTop = 0; scrollPresets(); }
+function setTab(tab) { state.tab = tab; state.overlay = null; show(); $(`#screen-${tab}`).scrollTop = 0; }
 function openOverlay(name) { state.overlay = name; show(); $(`#screen-${name}`).scrollTop = 0; }
 
-function resetJourneyState() { state.prefs = new Set(); state.selected = null; state.phase = "options"; state.stage = 0; state.today = null; state.sharing = null; state.reports = []; state.overlay = null; }
+function resetJourneyState() { state.search = null; state.prefs = new Set(); state.selected = null; state.phase = "options"; state.stage = 0; state.today = null; state.sharing = null; state.reports = []; state.overlay = null; }
 function useLeg(key) {
   if (!legInfo(key)) return;
   const changed = key !== state.leg;
@@ -913,10 +930,24 @@ const A = {
   toggle: b => { const k = b.dataset.key; state[k] = !state[k]; renderAll(); },
   scenarios: () => openSheet("scenarios"),
   "use-leg": b => useLeg(b.dataset.leg),
-  "not-now": () => { state.leg = null; resetJourneyState(); renderToday(); },
+  "s-open": () => { const d = current(); state.search = { from: d.from, to: d.to, prev: { leg: state.leg, today: state.today } }; renderToday(); },
+  "s-clear": () => { state.search = { from: "", to: "", prev: { leg: state.leg, today: state.today } }; renderToday(); },
+  "s-cancel": () => { const p = state.search?.prev; state.search = null; if (p) { state.leg = p.leg; state.today = p.today; } renderToday(); },
+  "s-swap": () => { const q = state.search; [q.from, q.to] = [q.to, q.from]; renderToday(); filterSaved(); },
+  "s-go": () => {
+    const q = state.search, from = q.from.trim(), to = q.to.trim();
+    if (!from || !to) return;
+    const match = allLegs().find(l => norm(l.from) === norm(from) && norm(l.to) === norm(to));
+    state.search = null;
+    if (match) { useLeg(match.key); return; }
+    state.leg = null; resetJourneyState(); state.today = { from, to }; setTab("today");
+    toast("Route for today only", "Not saved. Use Save as journey to keep it.");
+  },
+  "save-adhoc": () => { const d = current(); state.form = { from: d.from, to: d.to, name: "", out: "", hasRet: false, days: [] }; openSheet("form", "add"); },
   "swap-dir": () => {
-    const d = current(), L = d.L, ret = L.dir === "out" ? (L.j.ret ? `${L.j.id}:ret` : null) : `${L.j.id}:out`;
-    if (ret && !state.today) { useLeg(ret); return; }
+    const d = current(), L = d.L;
+    const ret = (L.dir === "out" ? (L.j.ret ? `${L.j.id}:ret` : null) : `${L.j.id}:out`) || allLegs().find(l => norm(l.from) === norm(d.to) && norm(l.to) === norm(d.from))?.key;
+    if (ret) { useLeg(ret); return; }
     state.today = { ...(state.today || {}), from: d.to, to: d.from };
     if (L.key && state.today.from === L.from && state.today.to === L.to && !state.today.time && !state.today.arriveBy) state.today = null;
     state.selected = null; state.phase = "options"; renderToday();
@@ -1003,6 +1034,8 @@ document.addEventListener("click", e => {
   if (fn) { e.preventDefault(); fn(a, e); }
 });
 document.addEventListener("input", e => {
+  const si = e.target.closest("[data-s]");
+  if (si && state.search) { state.search[si.dataset.s] = si.value; filterSaved(); return; }
   const s = e.target.closest("[data-slider]");
   if (s) { state.defaults[s.dataset.slider] = +s.value; s.closest(".pref-card").querySelector("output").value = s.value; const btn = $('[data-act="save-defaults"]'); if (btn) { btn.disabled = !dirty(); btn.classList.toggle("saved", !dirty()); btn.innerHTML = dirty() ? "Save preferences" : `${ICON.check} Saved`; } renderToday(); return; }
   const f = e.target.closest("[data-f]");
@@ -1015,7 +1048,10 @@ document.addEventListener("input", e => {
   }
 });
 document.addEventListener("toggle", e => { if (e.target.classList?.contains("more-defaults")) state.form.moreDefaults = e.target.open; }, true);
-document.addEventListener("keydown", e => { if (e.key === "Escape") closeSheet(); });
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape") closeSheet();
+  if (e.key === "Enter" && e.target.closest("[data-s]")) A["s-go"]();
+});
 
 /* ---------- boot (URL params for screenshots: ?scenario=0-3&screen=today|journeys|schedule|profile|details|active&sheet=why|compare|report|share|add&prefs=a,b&select=id) ---------- */
 (function boot() {

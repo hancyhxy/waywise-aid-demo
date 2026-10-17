@@ -22,7 +22,7 @@ Source: Evelyn's synthesis in `a2-deliverables/03-usability-evaluation/synthesis
 | R3 | Weekday scheduling is optional; skip or change one date without editing the schedule | Schedule view, Add journey |
 | R4 | Route-based names ("UTS (Central) → Chatswood"); custom names optional; no day templates | Saved journeys, forms |
 | R5 | **Profile** from the AL avatar: account sync status and default preferences | Profile tab |
-| R6 | Saved routes and return trip on Today, with "Suggested · your usual Wednesday journey" | Today |
+| R6 | Today opens on the journey that fits the scenario's day and time ("Suggested · usual Wed 17:45"). Flight-search style From/To card: swap button for the return direction; tap From/To or Clear to type a route or tap one of the three saved journeys | Today |
 | R7 | Separate scopes: Edit today's journey / Edit saved journey / Edit this occurrence / Edit recurring schedule, with matching titles and Save labels | Sheets |
 | R8 | Select route → brief confirmation → **Journey details** → Start journey → active journey | Today, details, active |
 | R9 | "Arrive sooner", "Prioritise a seat", "Select all that apply", check marks | Today |
@@ -36,6 +36,10 @@ Source: Evelyn's synthesis in `a2-deliverables/03-usability-evaluation/synthesis
 | R17 | Compare alternatives from details and active journey; "Too full to board, or delayed?" | Details, active |
 | R18 | Report carriage conditions; shown as passenger reports, separate from operator data | Details, active |
 | R19 | Share journey: arrival time once, or time-limited live arrival updates (progress by stop, not GPS location) | Details, active |
+
+## Demo data
+
+Three saved journeys, one per team scenario: After uni (UTS → Wollstonecraft), Work shift (UTS → Chatswood), Home from work (Chatswood → Wollstonecraft). Each scenario sets the day and time and shows one line of mood copy under the greeting (decorative only).
 
 ## Demo controls
 
