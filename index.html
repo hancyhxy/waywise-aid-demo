@@ -11,7 +11,7 @@
   <meta name="description" content="Waywise high-fidelity prototype: personalised commute decisions under crowding and disruption.">
   <link rel="manifest" href="manifest.webmanifest">
   <title>Waywise — High-fidelity prototype</title>
-  <link rel="stylesheet" href="styles.css?v=202610181430">
+  <link rel="stylesheet" href="styles.css?v=202610181710">
 </head>
 <body>
   <div class="demo-shell">
@@ -33,11 +33,20 @@
         <button class="scenario" data-scenario="normal">3 · Disruption on the way home</button>
       </div>
       <details class="changes">
+        <summary>What changed in v4.8 (journeys and schedule)</summary>
+        <ol>
+          <li>Saved journey = where (From/To); schedule = when (days + time, per direction). Route first, schedule optional.</li>
+          <li>After saving a journey: “Add to schedule” or “Not now”. Schedule has “Add to &lt;day&gt;”.</li>
+          <li>Tap a scheduled trip: Show routes now, Change time or Remove, for only this date or every week; Edit saved journey changes the route.</li>
+          <li>Route details: Start journey fixed at the bottom; “Not started yet” removed.</li>
+        </ol>
+      </details>
+      <details class="changes">
         <summary>What changed in v4 (IA cleanup)</summary>
         <ol>
           <li>Every bottom sheet closes with an ×; primary actions stay pinned at the bottom.</li>
           <li>One set of preferences everywhere: Today and Profile edit the same list.</li>
-          <li>Profile is an entry list — Saved journeys, Travel preferences, Alerts — each its own page.</li>
+          <li>Profile is one page: account sync, travel preferences and alerts (v4.8).</li>
           <li>Importance sliders replaced with simple preference toggles.</li>
           <li>Route cards slimmed to line, arrival, three badges, one warning and Start.</li>
           <li>“Why this route?” folded into Route details; close (×) vs collapse (⌄) disambiguated.</li>
@@ -92,6 +101,6 @@
       <div class="perm" id="perm"></div>
     </main>
   </div>
-  <script src="app.js?v=202610181430"></script>
+  <script src="app.js?v=202610181710"></script>
 </body>
 </html>

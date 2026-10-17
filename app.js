@@ -31,7 +31,10 @@ const ICON = {
   route: '<svg viewBox="0 0 24 24"><circle cx="6" cy="19" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/><circle cx="18" cy="5" r="3"/></svg>',
   go: '<svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>',
   clock: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>',
-  chevD: '<svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>'
+  chevD: '<svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>',
+  x: '<svg viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>',
+  edit: '<svg viewBox="0 0 24 24"><path d="M21.17 6.81a2.83 2.83 0 0 0-4-4L3.84 16.17a2 2 0 0 0-.5.83l-1.32 4.35a.5.5 0 0 0 .62.62l4.35-1.32a2 2 0 0 0 .83-.5z"/><path d="m15 5 4 4"/></svg>',
+  calendar: '<svg viewBox="0 0 24 24"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>'
 };
 
 /* Transport for NSW mode language: coloured roundel + white letter, line pill in the mode colour.
@@ -83,18 +86,40 @@ const DAY_NAME = { mon: "Monday", tue: "Tuesday", wed: "Wednesday", thu: "Thursd
 const DAY_DATE = { mon: 14, tue: 15, wed: 16, thu: 17, fri: 18, sat: 19, sun: 20 };
 const fullDate = d => `${DAY_NAME[d]} ${DAY_DATE[d]} October`;
 const daysText = days => DAYS.filter(d => days.includes(d)).map(d => DAY_NAME[d].slice(0, 3)).join(", ");
+/* "Mon–Thu", "Mon, Tue, Thu", "Weekdays" */
+const daysShort = days => {
+  const idx = DAYS.map((d, i) => (days.includes(d) ? i : -1)).filter(i => i >= 0);
+  if (idx.length === 7) return "Every day";
+  if (idx.join() === "0,1,2,3,4") return "Weekdays";
+  const out = []; let s = 0;
+  for (let i = 1; i <= idx.length; i++) if (i === idx.length || idx[i] !== idx[i - 1] + 1) {
+    const run = idx.slice(s, i).map(k => DAY_NAME[DAYS[k]].slice(0, 3));
+    out.push(run.length >= 3 ? `${run[0]}–${run[run.length - 1]}` : run.join(", ")); s = i;
+  }
+  return out.join(", ");
+};
+const sameDays = (a, b) => DAYS.filter(d => a.includes(d)).join() === DAYS.filter(d => b.includes(d)).join();
+const legDays = (j, dir) => (dir === "ret" ? j.ret?.days : j.days) || [];
+const legTime = (j, dir) => (dir === "ret" ? j.ret?.time : j.out) || "";
+const hasSchedule = j => legDays(j, "out").length > 0 || legDays(j, "ret").length > 0;
+const allDays = j => [...new Set([...legDays(j, "out"), ...legDays(j, "ret")])];
+const legSched = (j, dir) => { const d = legDays(j, dir), t = legTime(j, dir); return d.length ? `${daysShort(d)}${t ? ` · ${fmt(toMin(t))}` : ""}` : "Not scheduled"; };
 
 /* Alex's saved preferences (persona: wants a seat home, needs predictable arrivals). */
 const SEED_PREFS = ["seat", "reliable"];
 
-/* Saved journeys: route first; name, usual time, return and schedule are optional (R1–R4). */
+/* Two layers, like adding a course before putting it in a timetable (R1–R4):
+   - Saved journey = WHERE: From / To, optional return and name.
+   - Weekly schedule = WHEN (optional), set per direction: outbound = days + out, return = ret.days + ret.time.
+   Same split as the Today search card: From/To on top, Leave / Arrive by below. */
 const SEED_JOURNEYS = [
-  { id: "uni", from: "Wollstonecraft", to: "UTS (Central)", name: "University", out: "09:05", ret: { from: "UTS (Central)", to: "Wollstonecraft", time: "17:30" }, days: ["mon", "tue", "wed", "thu"] },
-  { id: "work", from: "UTS (Central)", to: "Chatswood", name: "Wednesday shift", out: "17:45", ret: { from: "Chatswood", to: "Wollstonecraft", time: "21:30" }, days: ["wed"] },
-  { id: "fri", from: "Wollstonecraft", to: "Chatswood", name: "Friday shift", out: "12:30", ret: { from: "Chatswood", to: "Wollstonecraft", time: "19:20" }, days: ["fri"] }
+  { id: "uni", from: "Wollstonecraft", to: "UTS (Central)", name: "University", out: "09:05", days: ["mon", "tue", "wed", "thu"], ret: { from: "UTS (Central)", to: "Wollstonecraft", time: "17:30", days: ["mon", "tue", "thu"] } },
+  { id: "work", from: "UTS (Central)", to: "Chatswood", name: "Wednesday shift", out: "17:45", days: ["wed"], ret: { from: "Chatswood", to: "Wollstonecraft", time: "21:30", days: ["wed"] } },
+  { id: "fri", from: "Wollstonecraft", to: "Chatswood", name: "Friday shift", out: "12:30", days: ["fri"], ret: { from: "Chatswood", to: "Wollstonecraft", time: "19:20", days: ["fri"] } }
 ];
-/* On Wednesdays Alex goes from uni straight to work, so that date's uni return is skipped. */
-const SEED_OCC = { "wed|uni:ret": { skip: true } };
+/* One-date exceptions: "day|leg" → { time } or { skip }. On Wednesdays Alex goes from uni straight to work,
+   so the uni return is simply not scheduled on Wednesdays (no exception needed). */
+const SEED_OCC = {};
 
 /* Scenarios follow the team's scenario cards (same content as mid-fi), with richer service detail. */
 const S = {
@@ -163,7 +188,7 @@ const state = {
   prefs: new Set(SEED_PREFS), prefDefault: new Set(SEED_PREFS), showMore: false, selected: null, phase: "options", stage: 0, tab: "today", overlay: null,
   jview: "list", schedDay: "wed", occ: clone(SEED_OCC), noCommute: new Set(),
   defaults: clone(DEFAULTS), savedDefaults: clone(DEFAULTS), alertsOn: true, sharing: null, reports: [],
-  today: null, reminder: null, locPerm: null, learn: true, actionable: true, sheet: null, form: {}, pview: "home"
+  today: null, reminder: null, locPerm: null, learn: true, actionable: true, sheet: null, form: {}
 };
 
 /* ---------- derived ---------- */
@@ -294,10 +319,9 @@ function scheduledToday(day) {
   if (state.noCommute.has(day)) return [];
   const legs = [];
   state.journeys.forEach(j => {
-    if (!j.days.includes(day)) return;
-    [["out", j.out, j.from, j.to], ["ret", j.ret?.time, j.ret?.from, j.ret?.to]].forEach(([dir, time, from, to]) => {
-      if (!from) return;
-      const key = `${j.id}:${dir}`, occ = state.occ[`${day}|${key}`] || {};
+    [["out", j.from, j.to], ["ret", j.ret?.from, j.ret?.to]].forEach(([dir, from, to]) => {
+      if (!from || !legDays(j, dir).includes(day)) return;
+      const time = legTime(j, dir), key = `${j.id}:${dir}`, occ = state.occ[`${day}|${key}`] || {};
       legs.push({ key, j, dir, from, to, time: occ.time || time, base: time, skip: !!occ.skip, changed: !!occ.time });
     });
   });
@@ -360,7 +384,7 @@ function renderToday() {
 
   const plist = [...state.prefs].map(prefLabel);
   const prefBar = np
-    ? `<div class="rank-row"><span class="rank-cap">Your preferences</span><button class="fchip on" data-act="prefs">${esc(plist.slice(0, 2).join(", "))}${np > 2 ? ` +${np - 2}` : ""}<b class="chev">▾</b></button></div>`
+    ? `<div class="rank-row"><span class="rank-cap">Your preferences</span><button class="fchip on" data-act="prefs"><span class="fc-l">${esc(plist.slice(0, 2).join(", "))}</span>${np > 2 ? `<span>+${np - 2}</span>` : ""}<b class="chev">▾</b></button></div>`
     : `<div class="rank-row"><span class="rank-cap">Your preferences</span><button class="fchip" data-act="prefs">Set what matters<b class="chev">▾</b></button></div>`;
   el.innerHTML = `${header}
     ${sharing}
@@ -397,7 +421,7 @@ function savedItem(l) {
   return `<button class="saved-item" data-act="use-leg" data-leg="${l.key}" data-from="${esc(norm(l.from))}" data-to="${esc(norm(l.to))}">
     <span class="si-icon">${ICON.route}</span>
     <span class="si-main"><b>${esc(l.from)} → ${esc(l.to)}</b><small>${esc(l.j.name || "Saved route")}${l.dir === "ret" ? " · return" : ""}</small></span>
-    <span class="si-when">${l.time ? fmt(toMin(l.time)) : ""}</span></button>`;
+    <span class="si-when">${l.time && legDays(l.j, l.dir).length ? fmt(toMin(l.time)) : ""}</span></button>`;
 }
 /* Change journey: full-height layer above Today (Google Maps search pattern). Today underneath is not re-rendered. */
 function openSearch(focus) {
@@ -509,7 +533,7 @@ function renderFirstRun() {
       <label class="field"><span>To <b>*</b></span><input id="q-to" placeholder="e.g. UTS (Central)" autocomplete="off"></label>
       <p class="form-error" id="q-error" role="alert"></p>
       <button class="btn primary full" data-act="quick-save">Save journey</button>
-      <button class="btn link full" data-act="add-journey">More options (usual times, return trip, schedule)</button>
+      <button class="btn link full" data-act="add-journey">More options (return trip, weekly schedule)</button>
     </article>
     <div class="empty-points">
       <p>${ICON.check} Compare taking, waiting or switching on every trip</p>
@@ -519,53 +543,55 @@ function renderFirstRun() {
 }
 
 /* ---------- render: Saved journeys ---------- */
+/* Journeys view = the routes (where). Schedule view = when they repeat. Each direction has its own days and time. */
 function renderJourneys() {
-  const el = $("#screen-journeys");
-  const list = state.journeys.length ? state.journeys.map(j => `
+  const el = $("#screen-journeys"), list = state.jview === "list";
+  const legRow = (j, dir) => {
+    const to = dir === "ret" ? j.ret.to : j.to, on = legDays(j, dir).length;
+    return `<button class="leg-row" data-act="use-leg" data-leg="${j.id}:${dir}" aria-label="Show routes to ${esc(to)} now"><span class="lr-ic">${dir === "ret" ? ICON.swap : ICON.route}</span><span class="lr-main"><b>${dir === "ret" ? "Return to" : "To"} ${esc(shortPlace(to))}</b><small class="${on ? "on" : ""}">${ICON.calendar}${legSched(j, dir)}</small></span><span class="lr-go">Routes ›</span></button>`;
+  };
+  const cards = state.journeys.length ? state.journeys.map(j => `
     <article class="jcard">
-      <div class="jtop"><div><strong>${esc(j.from)} → ${esc(j.to)}</strong>${j.name ? `<small>${esc(j.name)}</small>` : ""}</div>
-        <span class="sched-tag${j.days.length ? "" : " none"}">${j.days.length ? daysText(j.days) : "No schedule"}</span></div>
-      <div class="leg-rows">
-        <button class="leg-row" data-act="use-leg" data-leg="${j.id}:out"><span class="lr-ic">${ICON.route}</span><span class="lr-main"><b>To ${esc(shortPlace(j.to))}</b><small>Routes from now</small></span><i>›</i></button>
-        ${j.ret ? `<button class="leg-row" data-act="use-leg" data-leg="${j.id}:ret"><span class="lr-ic">${ICON.swap}</span><span class="lr-main"><b>Return to ${esc(shortPlace(j.ret.to))}</b><small>Routes from now</small></span><i>›</i></button>` : ""}
+      <div class="jtop"><div><strong>${esc(j.from)} → ${esc(j.to)}</strong>${j.name ? `<small>${esc(j.name)}</small>` : ""}</div></div>
+      <div class="leg-rows">${legRow(j, "out")}${j.ret ? legRow(j, "ret") : ""}</div>
+      <div class="jfoot">
+        <button class="btn link sm" data-act="edit-saved" data-id="${j.id}">${ICON.edit}Edit journey</button>
+        <button class="btn link sm" data-act="sched-open" data-id="${j.id}">${hasSchedule(j) ? `${ICON.calendar}Edit schedule` : `${ICON.plus}Add to schedule`}</button>
       </div>
-      <button class="btn link sm jedit" data-act="edit-saved" data-id="${j.id}">Edit</button>
     </article>`).join("")
-    : `<article class="empty-card"><strong>No saved journeys yet</strong><p>Save a route once and reuse it any day, with or without a schedule.</p><button class="btn primary sm" data-act="add-journey">${ICON.plus} Add journey</button></article>`;
+    : `<article class="empty-card"><strong>No saved journeys yet</strong><p>Save a route once and reuse it any day. Adding it to your schedule is optional.</p><button class="btn primary sm" data-act="add-journey">${ICON.plus} Add journey</button></article>`;
   el.innerHTML = `
     <header class="app-header">
       <div><p class="overline">YOUR ROUTES</p><h2>Saved journeys</h2></div>
-      <button class="btn primary sm add-btn" data-act="add-journey">${ICON.plus} Add journey</button>
+      ${list && state.journeys.length ? `<button class="btn primary sm add-btn" data-act="add-journey">${ICON.plus} Add journey</button>` : ""}
     </header>
     <div class="segmented" role="tablist">
-      <button role="tab" class="${state.jview === "list" ? "active" : ""}" data-act="jview" data-view="list">Journeys</button>
-      <button role="tab" class="${state.jview === "schedule" ? "active" : ""}" data-act="jview" data-view="schedule">Schedule</button>
+      <button role="tab" class="${list ? "active" : ""}" data-act="jview" data-view="list">Journeys</button>
+      <button role="tab" class="${list ? "" : "active"}" data-act="jview" data-view="schedule">Schedule</button>
     </div>
-    ${state.jview === "list" ? `<div class="jlist">${list}</div>` : renderSchedule()}`;
+    ${list ? `<div class="jlist">${cards}</div>` : renderSchedule()}`;
 }
 function renderSchedule() {
-  const day = state.schedDay, legs = scheduledToday(day);
+  const day = state.schedDay, dn = DAY_NAME[day], legs = scheduledToday(day);
   const strip = DAYS.map(dd => {
-    const has = !state.noCommute.has(dd) && state.journeys.some(j => j.days.includes(dd));
-    return `<button class="day${dd === day ? " active" : ""}" data-act="sched-day" data-day="${dd}"><small>${DAY_NAME[dd][0]}</small><strong>${DAY_DATE[dd]}</strong><i class="${has ? "on" : ""}${state.noCommute.has(dd) ? " off" : ""}"></i></button>`;
+    const has = scheduledToday(dd).some(l => !l.skip);
+    return `<button class="day${dd === day ? " active" : ""}" data-act="sched-day" data-day="${dd}" aria-label="${fullDate(dd)}"><small>${DAY_NAME[dd][0]}</small><strong>${DAY_DATE[dd]}</strong><i class="${has ? "on" : ""}${state.noCommute.has(dd) ? " off" : ""}"></i></button>`;
   }).join("");
+  const add = `<button class="btn ghost sm full add-day" data-act="pick-open">${ICON.plus} Add to ${dn}</button>`;
   let body;
   if (state.noCommute.has(day)) {
     body = `<div class="no-plan"><strong>No commute on this date</strong><p>Suggestions and alerts are paused for ${fullDate(day)} only.</p><button class="btn ghost sm" data-act="toggle-nocommute">Restore scheduled journeys</button></div>`;
   } else if (!legs.length) {
-    body = `<div class="no-plan"><strong>Nothing scheduled</strong><p>Saved journeys work without a schedule. Use any of them from Today.</p><button class="btn ghost sm" data-act="jview" data-view="list">Use a saved journey</button></div>`;
+    body = `<div class="no-plan"><strong>Nothing scheduled</strong><p>Add a saved journey to ${dn}s, or use any saved journey from Today without a schedule.</p></div>${add}`;
   } else {
     body = legs.map(l => `
-      <div class="occ${l.skip ? " skipped" : ""}">
+      <button class="occ${l.skip ? " skipped" : ""}" data-act="occ-menu" data-key="${l.key}">
         <time>${l.time ? fmt(toMin(l.time)) : "—"}</time>
-        <div><strong>${esc(l.from)} → ${esc(l.to)}</strong><small>${l.skip ? "Skipped for this date" : l.changed ? `Changed for this date (usually ${fmt(toMin(l.base))})` : esc(l.j.name || "Saved journey")}</small>
-          <div class="occ-actions">
-            ${l.skip ? `<button class="btn link sm" data-act="unskip" data-key="${l.key}">Restore</button>`
-        : `<button class="btn link sm" data-act="edit-occ" data-key="${l.key}">Change for this date</button><button class="btn link sm" data-act="skip" data-key="${l.key}">Skip this date</button>`}
-          </div></div>
-      </div>`).join("") + `<button class="btn ghost sm nocommute" data-act="toggle-nocommute">No commute on this date</button>`;
+        <span class="occ-main"><strong>${esc(l.from)} → ${esc(l.to)}</strong><small>${l.skip ? "Removed for this date" : l.changed ? `Changed for this date · usually ${fmt(toMin(l.base))}` : esc(l.j.name || "Saved journey")}</small></span>
+        <i>›</i>
+      </button>`).join("") + add + `<button class="btn link sm full nocommute" data-act="toggle-nocommute">No commute on this date</button>`;
   }
-  return `<p class="hint">Waywise uses your schedule to suggest the right journey. Skip or change any single date.</p>
+  return `<p class="hint">Tap a journey to change its time or remove it, for this date or every week.</p>
     <div class="week-picker">${strip}</div>
     <article class="day-card"><p class="overline">${fullDate(day).toUpperCase()}</p>${body}</article>`;
 }
@@ -581,39 +607,29 @@ const SLIDERS = [
 ];
 const MODES = [["train", "Train"], ["metro", "Metro"], ["bus", "Bus"], ["ferry", "Ferry"], ["lightrail", "Light rail"]];
 const dirty = () => JSON.stringify(state.defaults) !== JSON.stringify(state.savedDefaults);
-const profileSub = (title, body) => `
-  <header class="app-header subpage">
-    <button class="back-btn" data-act="pview" data-view="home" aria-label="Back to Profile">${ICON.back}</button>
-    <div><p class="overline">PROFILE</p><h2>${title}</h2></div>
-  </header>${body}`;
-function profilePrefs() {
-  const row = p => { const on = state.prefDefault.has(p.id); return `<button class="pref-row${on ? " on" : ""}" data-act="pref-def" data-pref="${p.id}" role="checkbox" aria-checked="${on}"><i>${on ? ICON.check : ""}</i><span>${p.label}</span></button>`; };
-  return profileSub("Travel preferences", `
-    <p class="hint">Your default preferences, used for every journey. Quick changes on Today don't change these unless you save them as default.</p>
-    <article class="pref-group"><div class="pref-list">${[...PREFS, MORE_PREFS[0]].map(row).join("")}</div></article>
-    <div class="pref-card"><strong>Transport modes</strong><small>Turn off modes you'd rather not use. We'll explain if no route avoids them.</small>
-      <div class="mode-chips">${MODES.map(([k, l]) => `<button class="chip${state.defaults.modes[k] ? " active" : ""}" data-act="mode" data-mode="${k}" role="checkbox" aria-checked="${state.defaults.modes[k]}"><i>${state.defaults.modes[k] ? ICON.check : ""}</i>${l}</button>`).join("")}</div>
-    </div>
-    <button class="btn link sm" data-act="method">How recommendations work ›</button>
-    <button class="btn link sm" data-act="reset-defaults">Reset preferences</button>`);
-}
-function profileAlerts() {
-  return profileSub("Alerts &amp; notifications", `
-    <div class="toggle-card"><span><span><strong>Actionable alerts only</strong><small>Notify me only when switching or waiting may help</small></span></span><button class="toggle${state.actionable ? " active" : ""}" data-act="toggle" data-key="actionable" aria-pressed="${state.actionable}"><i></i></button></div>
-    <div class="toggle-card"><span><span><strong>Learn from my choices</strong><small>Suggest changes to my defaults; never change them without asking</small></span></span><button class="toggle${state.learn ? " active" : ""}" data-act="toggle" data-key="learn" aria-pressed="${state.learn}"><i></i></button></div>`);
-}
+/* Profile = one page: account status, default travel preferences, alerts. Saved journeys stay in their own tab. */
 function renderProfile() {
-  const el = $("#screen-profile");
-  if (state.pview === "prefs") { el.innerHTML = profilePrefs(); return; }
-  if (state.pview === "alerts") { el.innerHTML = profileAlerts(); return; }
+  const el = $("#screen-profile"), n = state.journeys.length;
+  const row = p => { const on = state.prefDefault.has(p.id); return `<button class="pref-row${on ? " on" : ""}" data-act="pref-def" data-pref="${p.id}" role="checkbox" aria-checked="${on}"><i>${on ? ICON.check : ""}</i><span>${p.label}</span></button>`; };
+  const toggle = (k, t, sub) => `<div class="toggle-card"><span><span><strong>${t}</strong><small>${sub}</small></span></span><button class="toggle${state[k] ? " active" : ""}" data-act="toggle" data-key="${k}" aria-pressed="${state[k]}" aria-label="${t}"><i></i></button></div>`;
   el.innerHTML = `
     <header class="app-header"><div><p class="overline">PROFILE &amp; ACCOUNT</p><h2>Alex</h2></div><span class="avatar big">AL</span></header>
-    <article class="account-card">
-      <div class="acc-row">${ICON.cloud}<div><strong>Saved to your account</strong><small>alex.commuter@email.com · syncs across your devices</small></div></div>
-      <button class="row-link" data-act="tab" data-tab="journeys"><span>Saved journeys</span><i>›</i></button>
-      <button class="row-link" data-act="pview" data-view="prefs"><span>Travel preferences</span><i>›</i></button>
-      <button class="row-link" data-act="pview" data-view="alerts"><span>Alerts &amp; notifications</span><i>›</i></button>
-    </article>
+    <article class="account-card"><div class="acc-row">${ICON.cloud}<div><strong>Saved to your account</strong><small>alex.commuter@email.com<br>${n ? `${n} saved journey${n > 1 ? "s" : ""}, your schedule and preferences sync` : "Your preferences sync"} across your devices.</small></div></div></article>
+    <section class="block">
+      <p class="overline">TRAVEL PREFERENCES</p>
+      <p class="hint">Your defaults for every journey. Changes on Today apply to that trip only, unless you tap Save as default.</p>
+      <article class="pref-group"><div class="pref-list">${[...PREFS, MORE_PREFS[0]].map(row).join("")}</div></article>
+      <div class="pref-card"><strong>Transport modes</strong><small>Turn off modes you'd rather not use. We'll explain if no route avoids them.</small>
+        <div class="mode-chips">${MODES.map(([k, l]) => `<button class="chip${state.defaults.modes[k] ? " active" : ""}" data-act="mode" data-mode="${k}" role="checkbox" aria-checked="${state.defaults.modes[k]}"><i>${state.defaults.modes[k] ? ICON.check : ""}</i>${l}</button>`).join("")}</div>
+      </div>
+      ${toggle("learn", "Learn from my choices", "Suggest changes to my defaults; never change them without asking")}
+      <div class="profile-links"><button class="btn link sm" data-act="method">How recommendations work ›</button><button class="btn link sm" data-act="reset-defaults">Reset preferences</button></div>
+    </section>
+    <section class="block">
+      <p class="overline">ALERTS</p>
+      ${toggle("actionable", "Actionable alerts only", "Notify me only when switching or waiting may help")}
+      <p class="hint">To mute a single journey, turn off Alerts in its Route details.</p>
+    </section>
     <section class="block demo-only">
       <p class="overline">PROTOTYPE</p>
       <button class="btn ghost full" data-act="scenarios">Switch demo scenario</button>
@@ -669,7 +685,7 @@ function renderJourney() {
   const late = lateBy(o, d), st = state.stage, arrived = live && st === 3;
   const status = live
     ? `<span class="live-pill"><span class="pulse"></span>${arrived ? "Arrived" : "In progress"}</span>`
-    : `<span class="status-pill">${started ? "Not your current route" : "Not started yet"}</span>`;
+    : started ? `<span class="status-pill">Not your current route</span>` : "";
   let switchDiff = "";
   if (started && !live && cur) {
     const a = arrEnd(o) - arrEnd(cur), parts = [];
@@ -694,8 +710,10 @@ function renderJourney() {
   const cta = live ? ""
     : started ? `<button class="btn primary full" data-act="switch-ask" data-id="${o.id}">Switch to this route</button>`
       : `<button class="btn primary full" data-act="start">Start journey</button>`;
+  const keep = el.querySelector(".drawer-body")?.scrollTop || 0;
   el.innerHTML = `
     <div class="drawer-top"><button class="grab" data-act="close-drawer" aria-label="${live ? "Collapse" : "Close"}"></button><button class="drawer-x" data-act="close-drawer" aria-label="${live ? "Collapse to mini bar" : "Close"}">${live ? ICON.chevD : "×"}</button></div>
+    <div class="drawer-body">
     <p class="overline">${live ? "YOUR JOURNEY" : "ROUTE DETAILS"}</p>
     <h2 class="title">${esc(o.title)}</h2>
     <p class="muted">${esc(d.from)} → ${esc(d.to)}</p>
@@ -719,7 +737,9 @@ function renderJourney() {
       <button data-act="share">${ICON.share}<span>${state.sharing?.live ? "Sharing arrival updates" : "Share journey"}</span><i>›</i></button>
     </div>
     ${live && st < 3 ? `<button class="btn ghost full danger end-btn" data-act="end-ask">End journey</button><p class="hint center">You can end the journey at any time.</p>` : ""}
-    ${cta ? `<div class="sticky-cta">${cta}</div>` : ""}`;
+    </div>
+    ${cta ? `<div class="drawer-foot">${cta}</div>` : ""}`;
+  el.querySelector(".drawer-body").scrollTop = keep;
 }
 /* Arrival reminder (extra, not in the evaluation list): needs location, falls back to the timetable. */
 function reminderCard(o, d) {
@@ -734,15 +754,18 @@ function reminderCard(o, d) {
 }
 
 /* ---------- sheets ---------- */
-function openSheet(kind, arg) {
+function openSheet(kind, arg, keepScroll) {
   state.sheet = { kind, arg };
-  const sh = $("#sheet");
-  sh.innerHTML = `<button class="sheet-handle" data-act="close-sheet" aria-label="Close"></button><button class="sheet-x" data-act="close-sheet" aria-label="Close">×</button>${SHEETS[kind](arg)}`;
-  sh.scrollTop = 0;
+  const sh = $("#sheet"), top = keepScroll ? $(".sheet-body", sh)?.scrollTop || 0 : 0;
+  sh.innerHTML = `<button class="sheet-handle" data-act="close-sheet" aria-label="Close"></button><button class="sheet-x" data-act="close-sheet" aria-label="Close">×</button><div class="sheet-body">${SHEETS[kind](arg)}</div>`;
+  /* Primary actions move into a fixed footer below the scrolling body (position:sticky drifts on iOS). */
+  const body = $(".sheet-body", sh), act = body.lastElementChild;
+  if (act && act.classList.contains("sheet-actions")) sh.appendChild(act);
+  body.scrollTop = top;
   $("#backdrop").classList.add("open"); sh.classList.add("open");
 }
 function closeSheet() { state.sheet = null; $("#backdrop").classList.remove("open"); $("#sheet").classList.remove("open"); }
-function refreshSheet() { if (state.sheet) openSheet(state.sheet.kind, state.sheet.arg); }
+function refreshSheet() { if (state.sheet) openSheet(state.sheet.kind, state.sheet.arg, true); }
 
 const SHEETS = {
   prefs() {
@@ -846,15 +869,26 @@ const SHEETS = {
   form(mode) { return journeyForm(mode); }
 };
 
-/* Journey forms with explicit editing scope (R3, R4, R7; review pages 05–07). */
+/* Journey forms. Saved journey = WHERE (From/To, return). Schedule = WHEN (days + time per direction).
+   Every sheet names its scope: this saved journey / every week / one date (R3, R4, R7; review pages 05–07). */
+const schedLeg = key => scheduledToday(state.schedDay).find(x => x.key === key);
+const dayToggles = (set, sel) => `<div class="day-toggles">${DAYS.map(dd => `<button class="${sel.includes(dd) ? "active" : ""}" data-act="f-day" data-set="${set}" data-day="${dd}" aria-pressed="${sel.includes(dd)}" aria-label="${DAY_NAME[dd]}">${DAY_NAME[dd][0]}</button>`).join("")}</div>`;
+function openSched(id, preDay) {
+  const j = state.journeys.find(x => x.id === id);
+  const days = [...j.days], retDays = [...(j.ret?.days || [])];
+  if (preDay) { if (!days.includes(preDay)) days.push(preDay); if (j.ret && !retDays.includes(preDay)) retDays.push(preDay); }
+  state.form = { id, days, out: j.out || "", retDays, retTime: j.ret?.time || "", retSame: !j.ret || sameDays(days, retDays) };
+  openSheet("form", "sched");
+}
 function journeyForm(mode) {
   const f = state.form, err = `<p class="form-error" id="f-error" role="alert">${esc(f.error || "")}</p>`;
-  const autoName = f.from && f.to ? `${f.from} → ${f.to}` : "From → To";
+  const cancel = `<button class="btn ghost full" data-act="close-sheet">Cancel</button>`;
+  const radio = (scope, on, t, sub) => `<button class="${on ? "active" : ""}" data-act="f-scope" data-scope="${scope}"><i></i><span><strong>${t}</strong><small>${sub}</small></span></button>`;
   if (mode === "add" || mode === "edit-saved") {
-    const isAdd = mode === "add";
-    return `<p class="overline">SAVED JOURNEYS</p><h3>${isAdd ? "Add journey" : "Edit saved journey"}</h3>
-      ${isAdd ? "" : `<p class="scope-note">Changes apply to this saved journey wherever it's used, including future scheduled dates.</p>`}
-      ${isAdd && state.journeys.length ? `<label class="field"><span>Start from a saved journey (optional)</span><select data-f="copy"><option value="">Blank journey</option>${state.journeys.map(j => `<option value="${j.id}">${esc(j.from)} → ${esc(j.to)}</option>`).join("")}</select></label>` : ""}
+    const isAdd = mode === "add", autoName = f.from && f.to ? `${f.from} → ${f.to}` : "From → To";
+    return `<p class="overline">SAVED JOURNEY · WHERE</p><h3>${isAdd ? "Add journey" : "Edit saved journey"}</h3>
+      ${isAdd ? `<p class="hint">Start with where you go. Days and times are optional; you can add them next.</p>`
+        : `<p class="scope-note">Changes this route everywhere it's used, including scheduled dates. Days and times live in its schedule.</p>`}
       <div class="field-row swap-row">
         <label class="field"><span>From <b>*</b></span><input data-f="from" value="${esc(f.from || "")}" placeholder="e.g. Wollstonecraft" autocomplete="off"></label>
         <button class="swap-btn" data-act="f-swap" aria-label="Swap From and To">${ICON.swap}</button>
@@ -862,42 +896,89 @@ function journeyForm(mode) {
       </div>
       <p class="auto-name">Journey name: <b id="auto-name">${esc(autoName)}</b></p>
       <label class="field"><span>Custom name (optional)</span><input data-f="name" value="${esc(f.name || "")}" placeholder="e.g. Friday shift" autocomplete="off"></label>
-      <details class="opt"${f.out || f.hasRet ? " open" : ""}><summary>Usual time and return trip <small>optional</small></summary>
-        <label class="field"><span>Usually leave at</span><input type="time" data-f="out" value="${pad(f.out)}"></label>
-        <label class="check"><input type="checkbox" data-f="hasRet" ${f.hasRet ? "checked" : ""}> Add a return journey</label>
-        ${f.hasRet ? `<div class="field-row"><label class="field"><span>Return from</span><input data-f="retFrom" value="${esc(f.retFrom || "")}"></label><label class="field"><span>Return to</span><input data-f="retTo" value="${esc(f.retTo || "")}"></label></div>
-        <label class="field"><span>Return usually at (optional)</span><input type="time" data-f="retTime" value="${pad(f.retTime)}"></label>` : ""}
-      </details>
-      ${isAdd ? `<details class="opt"${f.days?.length ? " open" : ""}><summary>Set a recurring schedule <small>optional</small></summary>
-        <p class="hint">Only if this journey repeats. You can skip or change any single date later.</p>
-        <div class="day-toggles">${DAYS.map(dd => `<button class="${f.days?.includes(dd) ? "active" : ""}" data-act="f-day" data-day="${dd}" aria-pressed="${!!f.days?.includes(dd)}">${DAY_NAME[dd][0]}</button>`).join("")}</div>
-        ${f.days?.length ? `<button class="btn link sm" data-act="f-clear-days">Clear selected days</button>` : ""}
-      </details>` : `<button class="btn link sm" data-act="edit-sched" data-id="${f.id}">Edit recurring schedule (${state.journeys.find(j => j.id === f.id)?.days.length ? daysText(state.journeys.find(j => j.id === f.id).days) : "none"}) ›</button>`}
+      <label class="check"><input type="checkbox" data-f="hasRet" ${f.hasRet ? "checked" : ""}> I also travel back</label>
+      ${f.hasRet ? `<div class="field-row"><label class="field"><span>Return from</span><input data-f="retFrom" value="${esc(f.retFrom || "")}" placeholder="Same as To" autocomplete="off"></label><label class="field"><span>Return to</span><input data-f="retTo" value="${esc(f.retTo || "")}" placeholder="Same as From" autocomplete="off"></label></div>` : ""}
+      ${isAdd ? "" : `<button class="btn link sm danger-text" data-act="delete-ask">Delete this journey</button>`}
       ${err}
-      <div class="sheet-actions"><button class="btn primary full" data-act="f-save">Save journey</button><button class="btn ghost full" data-act="close-sheet">Cancel</button></div>`;
+      <div class="sheet-actions"><button class="btn primary full" data-act="f-save">Save journey</button>${cancel}</div>`;
   }
-  if (mode === "edit-occ") {
-    const l = scheduledToday(state.schedDay).find(x => x.key === f.key);
-    return `<p class="overline">SCHEDULE · ONE DATE</p><h3>Edit this occurrence</h3>
-      <p class="sheet-lede"><b>${fullDate(state.schedDay)}</b><br>${esc(l.from)} → ${esc(l.to)}</p>
-      <label class="field"><span>Leave at, this date only</span><input type="time" data-f="time" value="${pad(f.time)}"></label>
-      <p class="scope-note">Only ${fullDate(state.schedDay)} changes. Your saved journey and other ${DAY_NAME[state.schedDay]}s stay the same.</p>
-      ${err}
-      <div class="sheet-actions"><button class="btn primary full" data-act="f-save-occ">Save for this date</button><button class="btn ghost full" data-act="close-sheet">Cancel</button></div>`;
-  }
-  if (mode === "edit-sched") {
+  if (mode === "added") {
     const j = state.journeys.find(x => x.id === f.id);
-    const sum = f.days?.length ? `Affects every ${DAYS.filter(d => f.days.includes(d)).map(d => DAY_NAME[d]).join(", ")} from ${fullDate(state.schedDay === "sun" ? "mon" : "mon").replace("Monday ", "")}.` : "No recurring schedule. The journey stays saved and can be used any day.";
-    return `<p class="overline">SCHEDULE · EVERY WEEK</p><h3>Edit recurring schedule</h3>
+    return `<span class="saved-ok">${ICON.check}</span><p class="overline">JOURNEY SAVED</p><h3>${esc(j.from)} → ${esc(j.to)}</h3>
+      <p class="sheet-lede">${j.ret ? "Return trip included. " : ""}You can use it from Today any time.</p>
+      <div class="next-q"><strong>Do you travel this regularly?</strong><p>Add days and times, and Waywise will suggest it on Today and alert you to changes before you leave.</p></div>
+      <div class="sheet-actions"><button class="btn primary full" data-act="sched-open" data-id="${j.id}">Add to schedule</button><button class="btn ghost full" data-act="close-sheet">Not now</button></div>`;
+  }
+  if (mode === "sched") {
+    const j = state.journeys.find(x => x.id === f.id), had = hasSchedule(j);
+    const rd = f.retSame ? f.days : f.retDays, any = f.days.length || (j.ret && rd.length);
+    return `<p class="overline">WEEKLY SCHEDULE · WHEN</p><h3>${had ? "Edit schedule" : "Add to schedule"}</h3>
       <p class="sheet-lede">${esc(j.from)} → ${esc(j.to)}${j.name ? ` · ${esc(j.name)}` : ""}</p>
-      <p class="form-label">Repeat on</p>
-      <div class="day-toggles">${DAYS.map(dd => `<button class="${f.days?.includes(dd) ? "active" : ""}" data-act="f-day" data-day="${dd}" aria-pressed="${!!f.days?.includes(dd)}">${DAY_NAME[dd][0]}</button>`).join("")}</div>
-      <label class="field"><span>Usually leave at</span><input type="time" data-f="out" value="${pad(f.out)}"></label>
-      <p class="scope-note" id="sched-sum">${esc(sum)}</p>
+      <section class="sched-leg"><p class="form-label">${ICON.route}To ${esc(shortPlace(j.to))}</p>
+        ${dayToggles("out", f.days)}
+        <label class="field"><span>Leave at</span><input type="time" data-f="out" value="${pad(f.out)}"></label></section>
+      ${j.ret ? `<section class="sched-leg"><p class="form-label">${ICON.swap}Return to ${esc(shortPlace(j.ret.to))}</p>
+        <label class="check"><input type="checkbox" data-f="retSame" ${f.retSame ? "checked" : ""}> Same days as going</label>
+        ${f.retSame ? "" : dayToggles("ret", f.retDays)}
+        <label class="field"><span>Leave at</span><input type="time" data-f="retTime" value="${pad(f.retTime)}"></label></section>` : ""}
+      <p class="scope-note">${any ? "Repeats every week. Waywise suggests it on Today on these days and alerts you before you leave. To change one date only, tap it in Schedule." : "No days selected. The journey stays saved and can be used any day."}</p>
       ${err}
-      <div class="sheet-actions"><button class="btn primary full" data-act="f-save-sched">Save schedule</button>
-        ${j.days.length ? `<button class="btn link full" data-act="f-remove-sched">Remove schedule (keep the saved journey)</button>` : ""}
-        <button class="btn ghost full" data-act="close-sheet">Cancel</button></div>`;
+      <div class="sheet-actions"><button class="btn primary full" data-act="f-save-sched">Save schedule</button>${had ? `<button class="btn link full danger-text" data-act="f-remove-sched">Remove from schedule</button>` : ""}${cancel}</div>`;
+  }
+  if (mode === "pick") {
+    const day = state.schedDay, dn = DAY_NAME[day];
+    const items = state.journeys.map(j => {
+      const full = legDays(j, "out").includes(day) && (!j.ret || legDays(j, "ret").includes(day));
+      const sub = full ? `Already on ${dn}s` : hasSchedule(j) ? `Scheduled ${daysShort(allDays(j))}` : j.name ? `${esc(j.name)} · not scheduled` : "Not scheduled";
+      return `<button class="saved-item" data-act="pick-journey" data-id="${j.id}" ${full ? "disabled" : ""}><span class="si-icon">${ICON.route}</span><span class="si-main"><b>${esc(j.from)} → ${esc(j.to)}</b><small>${sub}</small></span><i class="si-chev">›</i></button>`;
+    }).join("");
+    return `<p class="overline">SCHEDULE · ${dn.toUpperCase()}</p><h3>Add to ${dn}</h3>
+      <p class="hint">${items ? `Pick a saved journey, then set its time. It repeats every ${dn}; you can still change or remove a single date.` : "Save the journey first, then choose its days and time."}</p>
+      ${items ? `<div class="saved-list">${items}</div>` : ""}
+      <button class="btn ${items ? "link" : "primary"} sm sl-add" data-act="add-journey" data-day="${day}">${ICON.plus} New journey</button>`;
+  }
+  if (mode === "occ") {
+    const l = schedLeg(f.key); if (!l) return "";
+    return `<p class="overline">${fullDate(state.schedDay).toUpperCase()}</p><h3>${esc(l.from)} → ${esc(l.to)}</h3>
+      <p class="sheet-lede">${l.skip ? "Removed for this date." : `Leave at ${fmt(toMin(l.time))}${l.changed ? `, changed for this date (usually ${fmt(toMin(l.base))})` : ""}.`}${l.j.name ? ` ${esc(l.j.name)}.` : ""}</p>
+      <p class="overline sl-h">THIS TRIP</p>
+      <div class="action-list">${l.skip
+        ? `<button data-act="unskip" data-key="${l.key}">${ICON.check}<span>Restore for this date</span><i>›</i></button>`
+        : `<button data-act="use-leg" data-leg="${l.key}">${ICON.route}<span>Show routes now</span><i>›</i></button>
+          <button data-act="occ-time">${ICON.clock}<span>Change time</span><i>›</i></button>
+          <button data-act="occ-remove">${ICON.x}<span>Remove from schedule</span><i>›</i></button>`}</div>
+      <p class="overline sl-h">THE ROUTE ITSELF</p>
+      <div class="action-list"><button data-act="edit-saved" data-id="${l.j.id}">${ICON.edit}<span>Edit saved journey</span><i>›</i></button></div>
+      <p class="hint">Changes From, To or the name everywhere this journey is used.</p>`;
+  }
+  if (mode === "occ-time") {
+    const l = schedLeg(f.key), every = f.scope === "every", dn = DAY_NAME[state.schedDay];
+    return `<p class="overline">CHANGE TIME</p><h3>${esc(l.from)} → ${esc(l.to)}</h3>
+      <label class="field"><span>Leave at</span><input type="time" data-f="time" value="${pad(f.time)}"></label>
+      <p class="form-label">Apply to</p>
+      <div class="radio-list">
+        ${radio("one", !every, `Only ${fullDate(state.schedDay)}`, `Other ${dn}s stay at ${fmt(toMin(l.base))}.`)}
+        ${radio("every", every, `Every week · ${daysShort(legDays(l.j, l.dir))}`, "Changes the usual time in your schedule.")}
+      </div>
+      ${l.changed && !every ? `<button class="btn link sm" data-act="f-occ-reset">Go back to the usual time (${fmt(toMin(l.base))})</button>` : ""}
+      ${err}
+      <div class="sheet-actions"><button class="btn primary full" data-act="f-save-occ">${every ? "Save for every week" : "Save for this date"}</button>${cancel}</div>`;
+  }
+  if (mode === "occ-remove") {
+    const l = schedLeg(f.key), every = f.scope === "every", dn = DAY_NAME[state.schedDay];
+    return `<p class="overline">REMOVE FROM SCHEDULE</p><h3>${esc(l.from)} → ${esc(l.to)}</h3>
+      <div class="radio-list">
+        ${radio("one", !every, `Only ${fullDate(state.schedDay)}`, "No suggestion or alerts that day. You can restore it.")}
+        ${radio("every", every, `Every ${dn}`, `Takes ${dn} out of this journey's weekly schedule.`)}
+      </div>
+      <p class="scope-note">The saved journey stays. You can still use it from Today any time.</p>
+      <div class="sheet-actions"><button class="btn primary full danger-fill" data-act="f-remove-occ">${every ? `Remove every ${dn}` : "Remove this date"}</button>${cancel}</div>`;
+  }
+  if (mode === "delete") {
+    const j = state.journeys.find(x => x.id === f.id);
+    return `<p class="overline">DELETE JOURNEY</p><h3>Delete ${esc(j.from)} → ${esc(j.to)}?</h3>
+      <p class="sheet-lede">${hasSchedule(j) ? "It will also be removed from your schedule. " : ""}This can't be undone.</p>
+      <div class="sheet-actions"><button class="btn primary full danger-fill" data-act="f-delete">Delete journey</button>${cancel}</div>`;
   }
   if (mode === "edit-today") {
     return `<p class="overline">TODAY ONLY</p><h3>Time for this journey</h3>
@@ -947,7 +1028,7 @@ function renderAll() {
   if (state.overlay === "details") renderJourney();
 }
 function setTab(tab) { state.tab = tab; state.overlay = null; show(); $(`#screen-${tab}`).scrollTop = 0; }
-function openOverlay(name) { state.overlay = name; show(); $(`#screen-${name}`).scrollTop = 0; }
+function openOverlay(name) { state.overlay = name; show(); const s = $(`#screen-${name}`); s.scrollTop = 0; const b = $(".drawer-body", s); if (b) b.scrollTop = 0; }
 
 function resetJourneyState() { state.prefs = new Set(state.prefDefault); state.selected = null; state.preview = null; state.phase = "options"; state.stage = 0; state.today = null; state.sharing = null; state.reports = []; state.overlay = null; }
 /* If today's suggested journey is skipped or the day is marked "No commute", Today goes back to an empty card. */
@@ -966,7 +1047,7 @@ function setScenario(id) {
   id = SCN_ALIAS[id] || id;
   if (id !== "newuser" && !S[id]) return;
   state.scenario = id; resetJourneyState();
-  state.occ = clone(SEED_OCC); state.noCommute = new Set(); state.form = {}; state.pview = "home"; state.prefDefault = id === "newuser" ? new Set() : new Set(SEED_PREFS); state.prefs = new Set(state.prefDefault);
+  state.occ = clone(SEED_OCC); state.noCommute = new Set(); state.form = {}; state.prefDefault = id === "newuser" ? new Set() : new Set(SEED_PREFS); state.prefs = new Set(state.prefDefault);
   if (id === "newuser") { state.journeys = []; state.leg = null; state.day = "tue"; state.clock = "08:40"; state.schedDay = "tue"; }
   else { const s = S[id]; state.journeys = clone(SEED_JOURNEYS); state.day = s.day; state.leg = scheduledToday(s.day).some(l => l.key === s.leg && !l.skip) ? s.leg : null; state.suggested = state.leg; state.clock = s.clock; state.schedDay = s.day; }
   $$(".demo-notes .scenario").forEach(b => b.classList.toggle("active", b.dataset.scenario === id));
@@ -987,7 +1068,6 @@ const A = {
   "prefer-ontime": () => { state.prefs.delete("seat"); state.prefs.add("sooner"); renderToday(); },
   method: () => openSheet("method"),
   certainty: () => openSheet("certainty"),
-  pview: b => { state.pview = b.dataset.view; renderProfile(); $("#screen-profile").scrollTop = 0; },
   "start-route": b => { state.preview = b.dataset.id; A.start(); },
   "open-route": b => { state.preview = b.dataset.id; closeSheet(); openOverlay("details"); },
   "back-routes": () => { state.overlay = null; show(); },
@@ -1014,7 +1094,7 @@ const A = {
   "switch-to": b => {
     const d = current(), o = d.options.find(x => x.id === b.dataset.id);
     closeSheet();
-    if (state.phase !== "active") { state.preview = o.id; renderJourney(); $("#screen-details").scrollTop = 0; toast(`Showing ${lcT(o.title)}`, `Arrives ${o.arrives}.`); return; }
+    if (state.phase !== "active") { state.preview = o.id; renderJourney(); $("#screen-details .drawer-body").scrollTop = 0; toast(`Showing ${lcT(o.title)}`, `Arrives ${o.arrives}.`); return; }
     state.selected = o.id; state.preview = o.id; state.stage = Math.min(state.stage, 1); openOverlay("details");
     toast(`Switched to ${lcT(o.title)}`, state.sharing?.live ? `Arrival ${o.arrives}. ${state.sharing.to} has been updated.` : `Arrives ${o.arrives}.`);
   },
@@ -1039,7 +1119,7 @@ const A = {
   "stop-share": () => { state.sharing = null; renderAll(); toast("Sharing stopped", "No further updates will be sent."); },
   toggle: b => { const k = b.dataset.key; state[k] = !state[k]; renderAll(); },
   scenarios: () => openSheet("scenarios"),
-  "use-leg": b => { closeSearch(); useLeg(b.dataset.leg); },
+  "use-leg": b => { closeSearch(); closeSheet(); useLeg(b.dataset.leg); },
   prefs: () => openSheet("prefs"),
   "s-open": b => openSearch(b.dataset.focus),
   "s-close": () => closeSearch(),
@@ -1066,61 +1146,95 @@ const A = {
   },
   jview: b => { state.jview = b.dataset.view; renderJourneys(); },
   "sched-day": b => { state.schedDay = b.dataset.day; renderJourneys(); },
-  skip: b => { const k = `${state.schedDay}|${b.dataset.key}`; state.occ[k] = { ...(state.occ[k] || {}), skip: true }; syncSuggestion(); renderAll(); toast("Skipped for this date", `${fullDate(state.schedDay)} only. Your schedule is unchanged.`); },
-  unskip: b => { const k = `${state.schedDay}|${b.dataset.key}`; if (state.occ[k]) delete state.occ[k].skip; renderJourneys(); },
+  "pick-open": () => { state.form = {}; openSheet("form", "pick"); },
+  "pick-journey": b => openSched(b.dataset.id, state.schedDay),
+  "sched-open": b => openSched(b.dataset.id),
+  "occ-menu": b => { state.form = { key: b.dataset.key }; openSheet("form", "occ"); },
+  "occ-time": () => { const l = schedLeg(state.form.key); state.form = { key: l.key, time: l.time, scope: "one" }; openSheet("form", "occ-time"); },
+  "occ-remove": () => { state.form = { key: state.form.key, scope: "one" }; openSheet("form", "occ-remove"); },
+  "f-scope": b => { state.form.scope = b.dataset.scope; state.form.error = ""; refreshSheet(); },
+  unskip: b => { const k = `${state.schedDay}|${b.dataset.key}`; if (state.occ[k]) delete state.occ[k].skip; closeSheet(); renderAll(); toast("Restored", `${fullDate(state.schedDay)} is back on your schedule.`); },
   "toggle-nocommute": () => { const d = state.schedDay; state.noCommute.has(d) ? state.noCommute.delete(d) : state.noCommute.add(d); syncSuggestion(); renderAll(); },
   "mode": b => { const k = b.dataset.mode; state.defaults.modes[k] = !state.defaults.modes[k]; state.savedDefaults = clone(state.defaults); renderProfile(); renderToday(); },
   "save-defaults": () => { state.savedDefaults = clone(state.defaults); renderAll(); toast("Preferences saved", "Saved to your account. Applies to new journeys."); },
-  "reset-defaults": () => { state.prefs = new Set(); state.defaults = clone(DEFAULTS); state.savedDefaults = clone(DEFAULTS); renderAll(); toast("Preferences reset"); },
+  "reset-defaults": () => { state.prefs = new Set(); state.prefDefault = new Set(); state.defaults = clone(DEFAULTS); state.savedDefaults = clone(DEFAULTS); renderAll(); toast("Preferences reset"); },
   "quick-save": () => {
     const from = $("#q-from").value.trim(), to = $("#q-to").value.trim();
     if (!from || !to) { $("#q-error").textContent = "Add where you start and where you're going."; return; }
     const id = "j" + Date.now();
-    state.journeys.push({ id, from, to, name: "", out: "", ret: null, days: [] });
+    state.journeys.push({ id, from, to, name: "", out: "", days: [], ret: null });
     state.leg = `${id}:out`; resetJourneyState(); setTab("today");
-    toast("Journey saved", `${from} → ${to}. No schedule needed. Here are today's options.`);
+    toast("Journey saved", "Here are today's options. A schedule is optional.", { act: "sched-open", attrs: `data-id="${id}"`, label: "Add to schedule" });
   },
-  "add-journey": () => { state.form = { from: "", to: "", name: "", out: "", hasRet: false, days: [] }; openSheet("form", "add"); },
+  "add-journey": b => { state.form = { from: "", to: "", name: "", hasRet: false, preDay: b?.dataset?.day || "" }; openSheet("form", "add"); },
   "edit-saved": b => {
     const j = state.journeys.find(x => x.id === b.dataset.id);
-    state.form = { id: j.id, from: j.from, to: j.to, name: j.name, out: j.out, hasRet: !!j.ret, retFrom: j.ret?.from, retTo: j.ret?.to, retTime: j.ret?.time };
+    state.form = { id: j.id, from: j.from, to: j.to, name: j.name, hasRet: !!j.ret, retFrom: j.ret?.from, retTo: j.ret?.to };
     openSheet("form", "edit-saved");
   },
-  "edit-occ": b => { const l = scheduledToday(state.schedDay).find(x => x.key === b.dataset.key); state.form = { key: l.key, time: l.time }; openSheet("form", "edit-occ"); },
-  "edit-sched": b => { const j = state.journeys.find(x => x.id === b.dataset.id); state.form = { id: j.id, days: [...j.days], out: j.out }; openSheet("form", "edit-sched"); },
+  "delete-ask": () => openSheet("form", "delete"),
+  "f-delete": () => {
+    const id = state.form.id, j = state.journeys.find(x => x.id === id);
+    state.journeys = state.journeys.filter(x => x.id !== id);
+    if (state.leg?.startsWith(`${id}:`)) { state.leg = null; state.suggested = null; resetJourneyState(); }
+    closeSheet(); renderAll(); toast("Journey deleted", `${j.from} → ${j.to}`);
+  },
   "edit-today": () => { const d = current(); if (!d) return; const leave = fmt(Math.min(...d.options.map(o => toMin(o.leaveBy)))); state.form = { time: leave, arriveBy: d.target || "", orig: { time: leave, arriveBy: d.target || "" } }; openSheet("form", "edit-today"); },
   "f-swap": () => { const f = state.form; [f.from, f.to] = [f.to, f.from]; refreshSheet(); },
-  "f-day": b => { const f = state.form; f.days = f.days || []; const d = b.dataset.day; f.days = f.days.includes(d) ? f.days.filter(x => x !== d) : [...f.days, d]; refreshSheet(); },
-  "f-clear-days": () => { state.form.days = []; refreshSheet(); },
+  "f-day": b => { const f = state.form, k = b.dataset.set === "ret" ? "retDays" : "days", d = b.dataset.day; f[k] = f[k].includes(d) ? f[k].filter(x => x !== d) : [...f[k], d]; f.error = ""; refreshSheet(); },
   "f-save": () => {
     const f = state.form, mode = state.sheet.arg;
     if (!f.from?.trim() || !f.to?.trim()) { f.error = "Add where you start and where you're going."; refreshSheet(); return; }
-    const ret = f.hasRet ? { from: (f.retFrom || f.to).trim(), to: (f.retTo || f.from).trim(), time: f.retTime || "" } : null;
+    const from = f.from.trim(), to = f.to.trim(), name = (f.name || "").trim();
+    const retFrom = (f.retFrom || to).trim(), retTo = (f.retTo || from).trim();
     if (mode === "add") {
       const id = "j" + Date.now();
-      state.journeys.push({ id, from: f.from.trim(), to: f.to.trim(), name: (f.name || "").trim(), out: f.out || "", ret, days: f.days || [] });
-      closeSheet(); state.form = {};
-      if (!state.leg) { state.leg = `${id}:out`; resetJourneyState(); setTab(state.tab); }
+      state.journeys.push({ id, from, to, name, out: "", days: [], ret: f.hasRet ? { from: retFrom, to: retTo, time: "", days: [] } : null });
+      if (!state.leg) { state.leg = `${id}:out`; resetJourneyState(); }
       renderAll();
-      toast("Journey saved", `${f.from.trim()} → ${f.to.trim()}${f.days?.length ? ` · ${daysText(f.days)}` : " · no schedule"}`, { act: "use-leg", attrs: `data-leg="${id}:out"`, label: "Use journey" });
+      /* Step 2 (optional): straight into the schedule when the user came from "Add to <day>", otherwise ask. */
+      if (f.preDay) openSched(id, f.preDay);
+      else { state.form = { id }; openSheet("form", "added"); }
     } else {
       const j = state.journeys.find(x => x.id === f.id);
-      Object.assign(j, { from: f.from.trim(), to: f.to.trim(), name: (f.name || "").trim(), out: f.out || "", ret });
-      if (!ret && state.leg === `${j.id}:ret`) state.leg = `${j.id}:out`;
+      Object.assign(j, { from, to, name, ret: f.hasRet ? { from: retFrom, to: retTo, time: j.ret?.time || "", days: j.ret?.days || [] } : null });
+      if (!j.ret && state.leg === `${j.id}:ret`) state.leg = `${j.id}:out`;
       closeSheet(); renderAll(); toast("Saved journey updated", `${j.from} → ${j.to}`);
     }
   },
   "f-save-occ": () => {
-    const f = state.form; if (!f.time) { f.error = "Add a leave time."; refreshSheet(); return; }
-    const k = `${state.schedDay}|${f.key}`; state.occ[k] = { ...(state.occ[k] || {}), time: f.time };
-    closeSheet(); renderJourneys(); toast("Saved for this date", `${fullDate(state.schedDay)} only.`);
+    const f = state.form, l = schedLeg(f.key), k = `${state.schedDay}|${f.key}`;
+    if (!f.time) { f.error = "Add a leave time."; refreshSheet(); return; }
+    if (f.scope === "every") {
+      if (l.dir === "ret") l.j.ret.time = f.time; else l.j.out = f.time;
+      if (state.occ[k]) delete state.occ[k].time;
+      closeSheet(); renderAll(); toast("Saved for every week", `${daysShort(legDays(l.j, l.dir))} at ${fmt(toMin(f.time))}`);
+    } else {
+      if (toMin(f.time) === toMin(l.base)) { if (state.occ[k]) delete state.occ[k].time; }
+      else state.occ[k] = { ...(state.occ[k] || {}), time: f.time };
+      closeSheet(); renderAll(); toast("Saved for this date", `${fullDate(state.schedDay)} only. Other ${DAY_NAME[state.schedDay]}s stay the same.`);
+    }
+  },
+  "f-occ-reset": () => { const k = `${state.schedDay}|${state.form.key}`; if (state.occ[k]) delete state.occ[k].time; closeSheet(); renderAll(); toast("Back to the usual time"); },
+  "f-remove-occ": () => {
+    const f = state.form, l = schedLeg(f.key), day = state.schedDay, k = `${day}|${f.key}`;
+    if (f.scope === "every") {
+      if (l.dir === "ret") l.j.ret.days = l.j.ret.days.filter(d => d !== day); else l.j.days = l.j.days.filter(d => d !== day);
+      delete state.occ[k];
+      toast(`Removed from every ${DAY_NAME[day]}`, "The saved journey stays.");
+    } else { state.occ[k] = { ...(state.occ[k] || {}), skip: true }; toast("Removed for this date", `${fullDate(day)} only. You can restore it.`); }
+    closeSheet(); syncSuggestion(); renderAll();
   },
   "f-save-sched": () => {
     const f = state.form, j = state.journeys.find(x => x.id === f.id);
-    j.days = DAYS.filter(d => f.days.includes(d)); if (f.out) j.out = f.out;
-    closeSheet(); renderAll(); toast("Schedule saved", j.days.length ? `Every ${daysText(j.days)}` : "No recurring schedule");
+    const out = DAYS.filter(d => f.days.includes(d)), ret = j.ret ? DAYS.filter(d => (f.retSame ? f.days : f.retDays).includes(d)) : [];
+    if (out.length && !f.out) { f.error = `Add a leave time for the trip to ${shortPlace(j.to)}.`; refreshSheet(); return; }
+    if (ret.length && !f.retTime) { f.error = "Add a leave time for the return trip."; refreshSheet(); return; }
+    j.days = out; j.out = f.out || ""; if (j.ret) Object.assign(j.ret, { days: ret, time: f.retTime || "" });
+    closeSheet(); syncSuggestion(); renderAll();
+    toast(hasSchedule(j) ? "Schedule saved" : "No days selected", hasSchedule(j) ? `${j.from} → ${j.to} · ${daysShort(allDays(j))}` : "The journey is still saved.");
   },
-  "f-remove-sched": () => { const j = state.journeys.find(x => x.id === state.form.id); j.days = []; closeSheet(); renderAll(); toast("Schedule removed", "The journey is still saved."); },
+  "f-remove-sched": () => { const j = state.journeys.find(x => x.id === state.form.id); j.days = []; if (j.ret) j.ret.days = []; closeSheet(); syncSuggestion(); renderAll(); toast("Removed from schedule", "The journey is still saved."); },
   "f-save-today": () => {
     const f = state.form, t = { ...(state.today || {}) };
     if (f.time && f.time !== pad(f.orig.time) && fmt(toMin(f.time)) !== f.orig.time) t.time = f.time;
@@ -1162,7 +1276,7 @@ document.addEventListener("input", e => {
   if (f) {
     const k = f.dataset.f;
     state.form[k] = f.type === "checkbox" ? f.checked : f.value;
-    if (k === "copy" && f.value) { const j = state.journeys.find(x => x.id === f.value); Object.assign(state.form, { from: j.from, to: j.to }); refreshSheet(); return; }
+    if (k === "retSame") { if (!f.checked) state.form.retDays = [...state.form.days]; refreshSheet(); return; }
     if (k === "hasRet") { if (f.checked) { state.form.retFrom = state.form.retFrom || state.form.to; state.form.retTo = state.form.retTo || state.form.from; } refreshSheet(); return; }
     if (k === "from" || k === "to") { const n = $("#auto-name"); if (n) n.textContent = state.form.from && state.form.to ? `${state.form.from} → ${state.form.to}` : "From → To"; }
   }
@@ -1173,7 +1287,7 @@ document.addEventListener("keydown", e => {
   if (e.key === "Enter" && e.target.closest("[data-s]")) A["s-go"]();
 });
 
-/* ---------- boot (URL params for screenshots: ?scenario=0-3&screen=today|journeys|schedule|profile|details|active&sheet=why|compare|report|share|add&prefs=a,b&select=id) ---------- */
+/* ---------- boot (URL params for screenshots: ?scenario=0-3&screen=today|journeys|schedule|profile|details|active&sheet=why|compare|report|share|add|sched|pick|added|occ&prefs=a,b&select=id) ---------- */
 (function boot() {
   const q = new URLSearchParams(location.search);
   let sc = null; try { sc = localStorage.getItem("waywise-hifi-scenario"); } catch (e) { }
@@ -1189,7 +1303,11 @@ document.addEventListener("keydown", e => {
   else renderAll();
   const sheet = q.get("sheet");
   if (sheet === "add") A["add-journey"]();
-  else if (sheet === "why") { state.preview = state.preview || ranked(current())[0].id; openOverlay("details"); }
+  else if (sheet === "sched" && state.journeys.some(j => j.id === (q.get("id") || "uni"))) openSched(q.get("id") || "uni");
+  else if (sheet === "pick") A["pick-open"]();
+  else if (sheet === "added" && state.journeys.some(j => j.id === (q.get("id") || "fri"))) { state.form = { id: q.get("id") || "fri" }; openSheet("form", "added"); }
+  else if (sheet === "occ") { const l = scheduledToday(state.schedDay)[0]; if (l) A["occ-menu"]({ dataset: { key: l.key } }); }
+  else if (sheet === "why" && current()) { state.preview = state.preview || ranked(current())[0].id; openOverlay("details"); }
   else if (sheet && state.preview && ["compare", "report", "share"].includes(sheet)) A[sheet]({ dataset: {} });
   else if (sheet === "edit-today") A["edit-today"]();
   if (q.get("export") === "1") document.body.classList.add("export");
