@@ -514,8 +514,7 @@ function routeCard(o, d, rec) {
       </div>
       ${conf.length ? `<p class="conflict">${ICON.warn}<span>${esc(conf[0])}</span></p>` : ""}
       ${live ? `<div class="rc-foot"><span></span><button class="btn primary sm" data-act="open-active">View journey</button></div>`
-      : isRec && state.phase !== "active" ? `<div class="rc-foot"><span class="why-link">Tap for details</span><button class="btn primary sm" data-act="start-route" data-id="${o.id}">Start</button></div>`
-        : `<i class="rc-chev" aria-hidden="true">›</i>`}
+      : `<div class="rc-foot"><span class="why-link">Details ›</span>${isRec && state.phase !== "active" ? `<button class="btn primary sm" data-act="start-route" data-id="${o.id}">Start</button>` : ""}</div>`}
     </div>
   </article>`;
 }

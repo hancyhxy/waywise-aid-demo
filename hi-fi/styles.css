@@ -886,3 +886,5 @@ button.conf-row { display:block; width:calc(100% - 4px); padding:0; border:0; ba
 .sl-head { padding:6px 8px 0; }
 .sl-head .sl-back { width:auto; height:40px; display:inline-flex; align-items:center; gap:2px; padding:0 8px 0 2px; font-size:16px; font-weight:700; color:var(--ink); }
 .sl-top { padding:6px 6px 6px 16px; }
+/* v4.16: every card shows Details ›; only the recommended card has Start */
+.route-card:not(.recommended) .rc-foot { min-height:22px; }
