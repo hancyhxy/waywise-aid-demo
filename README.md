@@ -22,10 +22,10 @@ Source: Evelyn's synthesis in `a2-deliverables/03-usability-evaluation/synthesis
 | R3 | Weekday scheduling is optional; skip or change one date without editing the schedule | Schedule view, Add journey |
 | R4 | Route-based names ("UTS (Central) → Chatswood"); custom names optional; no day templates | Saved journeys, forms |
 | R5 | **Profile** from the AL avatar: account sync status and default preferences | Profile tab |
-| R6 | Today opens on the journey that fits the scenario's day and time ("Suggested · usual Wed 17:45"). Flight-search style From/To card: swap button for the return direction; tap From/To or Clear to type a route or tap one of the three saved journeys | Today |
+| R6 | Today opens on the journey that fits the scenario's day and time ("Suggested from your schedule"), with a **Today's plan** strip (done / now / later) built from the weekly template. Google Maps-style layering: compact From/To card with a swap button; tapping From/To opens a full-height **Change journey** layer (type a route, or tap today's or other saved journeys) without reloading Today | Today |
 | R7 | Separate scopes: Edit today's journey / Edit saved journey / Edit this occurrence / Edit recurring schedule, with matching titles and Save labels | Sheets |
 | R8 | Select route → brief confirmation → **Journey details** → Start journey → active journey | Today, details, active |
-| R9 | "Arrive sooner", "Prioritise a seat", "Select all that apply", check marks | Today |
+| R9 | Filter row under "What should I do?": Leave ▾, Arrive by ▾, Preferences ▾. The Preferences sheet lists every option at once with "Select all that apply" and check marks | Today |
 | R10 | Today's choices apply to this journey only; explicit "Save as default"; Reset | Today, Profile |
 | R11 | More preferences: less waiting, predictable arrival, transport modes | Today, Profile |
 | R12 | Wait / Departs / Arrives shown separately; "9 min later than the next train" | Route cards |
@@ -39,7 +39,7 @@ Source: Evelyn's synthesis in `a2-deliverables/03-usability-evaluation/synthesis
 
 ## Demo data
 
-Three saved journeys, one per team scenario: After uni (UTS → Wollstonecraft), Work shift (UTS → Chatswood), Home from work (Chatswood → Wollstonecraft). Each scenario sets the day and time and shows one line of mood copy under the greeting (decorative only).
+Three saved journeys with returns form the weekly template: University (Wollstonecraft ⇄ UTS, Mon–Thu 9:05 / 17:30; Wednesday return skipped for work), Wednesday shift (UTS → Chatswood 17:45, home 21:30), Friday shift (Wollstonecraft → Chatswood 12:30, home 19:20). Scenario 1 = Tuesday 17:30 return from uni, 2 = Wednesday 17:45 to work, 3 = Friday 19:20 home. Each scenario shows one line of mood copy under the greeting (decorative only).
 
 ## Demo controls
 
