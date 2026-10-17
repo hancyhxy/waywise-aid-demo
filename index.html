@@ -2,108 +2,17 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover,interactive-widget=resizes-content">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="Waywise">
-  <meta name="theme-color" content="#f4f5f7">
-  <meta name="description" content="Waywise high-fidelity prototype: personalised commute decisions under crowding and disruption.">
-  <link rel="manifest" href="manifest.webmanifest">
-  <title>Waywise — High-fidelity prototype</title>
-  <link rel="stylesheet" href="styles.css?v=202610181900">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Waywise prototypes</title>
+  <!-- The high-fidelity prototype lives at /hi-fi/ (same pattern as /low-fi/ and /mid-fi/).
+       Old root links, including ?scenario=… parameters, are forwarded there. -->
+  <script>location.replace("hi-fi/" + location.search + location.hash);</script>
+  <meta http-equiv="refresh" content="0; url=hi-fi/">
+  <link rel="canonical" href="hi-fi/">
+  <style>body{margin:40px;font:15px/1.5 -apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;color:#1d1f23}a{color:#2f5fd0}</style>
 </head>
 <body>
-  <div class="demo-shell">
-    <aside class="demo-notes" aria-label="Prototype notes">
-      <p class="eyebrow">AID · HIGH-FIDELITY PROTOTYPE · V4</p>
-      <h1>Waywise</h1>
-      <p class="lede">Compare the real consequences of taking, waiting or switching when a familiar commute changes.</p>
-      <div class="research-note">
-        <span>Built on the mid-fi and revised after usability testing</span>
-        <strong>19 changes from the usability-evaluation synthesis (17 Oct)</strong>
-        <p><a href="low-fi/">Low-fi</a> · <a href="mid-fi/">Mid-fi</a> · <a href="mid-fi-v1-tested/">Mid-fi (tested build)</a> · <a href="concept/">Original concept</a></p>
-        <small>Fictional data. Changes reset on reload.</small>
-      </div>
-      <div class="scenario-control" aria-label="Demo scenario">
-        <span>Try a scenario</span>
-        <button class="scenario" data-scenario="newuser">0 · First-time user</button>
-        <button class="scenario" data-scenario="capacity">1 · Comfortable journey home</button>
-        <button class="scenario" data-scenario="disruption">2 · Getting to work on time</button>
-        <button class="scenario" data-scenario="normal">3 · Disruption on the way home</button>
-      </div>
-      <details class="changes">
-        <summary>What changed in v4.8–4.9</summary>
-        <ol>
-          <li>Saved journey = where (From/To); schedule = when (days + time, per direction). Route first, schedule optional.</li>
-          <li>After saving a journey: “Add to schedule” or “Not now”. Schedule has “Add to &lt;day&gt;”.</li>
-          <li>Tap a scheduled trip: Show routes now, Change time or Remove, for only this date or every week; Edit saved journey changes the route.</li>
-          <li>Route details: Start journey fixed at the bottom; “Not started yet” removed.</li>
-          <li>Preferences: usual set (Profile) vs “This journey” on Today; “Select all that apply”; Save for next time.</li>
-          <li>Route cards show Departs and Wait; later services say how much later they leave.</li>
-          <li>A shift start is a hard deadline: late options are never recommended.</li>
-        </ol>
-      </details>
-      <details class="changes">
-        <summary>What changed in v4 (IA cleanup)</summary>
-        <ol>
-          <li>Every bottom sheet closes with an ×; primary actions stay pinned at the bottom.</li>
-          <li>One set of preferences everywhere: Today and Profile edit the same list.</li>
-          <li>Profile is one page: account sync, travel preferences and alerts (v4.8).</li>
-          <li>Importance sliders replaced with simple preference toggles.</li>
-          <li>Route cards slimmed to line, arrival, three badges, one warning and Start.</li>
-          <li>“Why this route?” folded into Route details; close (×) vs collapse (⌄) disambiguated.</li>
-        </ol>
-      </details>
-      <details class="changes">
-        <summary>What changed from mid-fi</summary>
-        <ol>
-          <li>“Add your first journey” empty state; From and To are the only required fields.</li>
-          <li>Trips → <b>Saved journeys</b>, with Use / Edit / Add actions.</li>
-          <li>Weekday scheduling is optional; skip or change a single date.</li>
-          <li>Route-based names (“UTS → Chatswood”); custom names optional.</li>
-          <li><b>Profile</b> from the avatar: account sync, default preferences.</li>
-          <li>Saved routes and return trips on Today, with a suggested journey.</li>
-          <li>Separate scopes: today / saved journey / one date / recurring schedule.</li>
-          <li>Tap a route or <b>View details</b> → Route details drawer → Start journey → <b>In progress</b> drawer (× collapses to a mini bar; End journey any time, with confirmation).</li>
-          <li>Clear preference labels, “Select all that apply”, check marks.</li>
-          <li>Today's choices vs saved defaults; explicit “Save as default”.</li>
-          <li>More preferences: less waiting, predictable arrival, transport modes.</li>
-          <li>Wait / Departs / Arrives shown separately.</li>
-          <li>Consistent badges; active priorities emphasised with text.</li>
-          <li>“Why this route?” with reasons, trade-offs and preference conflicts.</li>
-          <li>“Arrival estimate confidence”, update times, operator vs prediction labels.</li>
-          <li>Carriage-level crowding diagram with direction and update time.</li>
-          <li>Compare alternatives from details and the active journey.</li>
-          <li>Report carriage conditions, labelled as passenger reports.</li>
-          <li>Share journey: arrival time once, or time-limited arrival updates.</li>
-        </ol>
-      </details>
-    </aside>
-
-    <main class="phone" id="phone" aria-label="Waywise mobile app prototype">
-      <div class="status-bar" aria-hidden="true"><span id="clock">17:45</span><span>●●● ▮</span></div>
-
-      <section class="screen" id="screen-today" aria-label="Today"></section>
-      <section class="screen" id="screen-journeys" aria-label="Saved journeys"></section>
-      <section class="screen" id="screen-profile" aria-label="Profile"></section>
-      <div class="drawer-backdrop" id="drawer-backdrop" data-act="close-drawer"></div>
-      <section class="screen overlay drawer" id="screen-details" aria-label="Route details"></section>
-      <button class="mini-bar" id="mini-bar" data-act="open-active" aria-label="Open journey in progress"></button>
-
-      <nav class="bottom-nav" aria-label="Primary navigation">
-        <button class="nav-item" data-act="tab" data-tab="today"><svg viewBox="0 0 24 24"><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/></svg><small>Today</small></button>
-        <button class="nav-item" data-act="tab" data-tab="journeys"><svg viewBox="0 0 24 24"><circle cx="6" cy="19" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/><circle cx="18" cy="5" r="3"/></svg><small>Saved journeys</small></button>
-        <button class="nav-item" data-act="tab" data-tab="profile"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M19 21a7 7 0 0 0-14 0"/></svg><small>Profile</small></button>
-      </nav>
-
-      <section class="search-layer" id="search-layer" aria-label="Change journey"></section>
-      <div class="sheet-backdrop" id="backdrop" data-act="close-sheet"></div>
-      <section class="bottom-sheet" id="sheet" role="dialog" aria-modal="true"></section>
-      <div class="toast" id="toast" role="status" aria-live="polite"></div>
-      <div class="perm" id="perm"></div>
-    </main>
-  </div>
-  <script src="app.js?v=202610181900"></script>
+  <p>Waywise high-fidelity prototype: <a href="hi-fi/">hi-fi/</a></p>
+  <p>Other versions: <a href="mid-fi/">Mid-fi</a> · <a href="mid-fi-v1-tested/">Mid-fi (tested build)</a> · <a href="low-fi/">Low-fi</a> · <a href="concept/">Original concept</a></p>
 </body>
 </html>

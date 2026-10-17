@@ -1,17 +1,18 @@
 # Waywise — AID prototypes
 
-Live: https://hancyhxy.github.io/waywise-aid-demo/
+Live: https://hancyhxy.github.io/waywise-aid-demo/hi-fi/ (the site root forwards there, keeping `?scenario=` parameters)
 
 | Path | Course version | Notes |
 | --- | --- | --- |
-| `/` (root) | **v3 high-fidelity** | Built from the latest mid-fi and revised after the usability evaluation. |
+| `/hi-fi/` | **v3 high-fidelity** | Built from the latest mid-fi and revised after the usability evaluation. Source: `hi-fi/` (`index.html`, `app.js`, `styles.css`). |
+| `/` (root) | Redirect | Forwards to `/hi-fi/` with the query string, so older root links still work. |
 | `/mid-fi/` | v2 mid-fidelity | Revised after the lo-fi heuristic evaluation. |
 | `/mid-fi-v1-tested/` | v2 as tested | Frozen build used in the 14 Oct usability sessions. Do not edit. |
 | `/low-fi/` | v1 low-fidelity | Wireframes and 16:9 deck. |
 | `/concept/` | Original concept demo | The Sep 2026 concept that used to live at the root. Archived. |
 | `/v2/` | Exploration | State-aware Rushing/Normal/Tired variant (not the course "v2"). |
 
-## High-fidelity (root): what changed after usability testing
+## High-fidelity (`/hi-fi/`): what changed after usability testing
 
 Source: Evelyn's synthesis in `a2-deliverables/03-usability-evaluation/synthesis-evelyn/` (`Prototype_Recommendation_List.pdf` R1–R19, `Prototype_Annotated_Review.pdf` pages 01–08). Visual language stays the mid-fi palette: neutral greys, one blue accent, red/amber/green for status only and always paired with text.
 
@@ -65,6 +66,8 @@ Screenshot URLs: `?scenario=0|1|2|3`, `&prefs=sooner,seat,walk,transfer,reliable
 ```bash
 python3 -m http.server 4317 --directory .
 ```
+
+Then open http://localhost:4317/hi-fi/ (the root forwards there).
 
 No build step, dependencies or live transport API. All transport data is fictional.
 
