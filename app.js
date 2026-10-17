@@ -54,6 +54,7 @@ const SEAT = ["Seat unlikely", "Seat unlikely", "Seat possible", "Seat more like
 const seatTone = s => (s <= 1 ? "warn" : s >= 3 ? "good" : "");
 const relTone = r => (r >= 85 ? "good" : r < 70 ? "warn" : "");
 const certainty = c => (c >= 85 ? "High" : c >= 70 ? "Medium" : "Low");
+const W_LABEL = { time: "On time", reliability: "Predictability", seat: "Seat", crowd: "Crowding", walk: "Walking", transfer: "Transfers", wait: "Waiting" };
 const CERT_RANGE = { High: "±2 min", Medium: "±5 min", Low: "±10+ min" };
 const CERTAINTY_COPY = {
   High: "Arrival is usually within 2 minutes of this estimate.",
@@ -179,7 +180,9 @@ function current() {
   const from = state.today?.from || L.from, to = state.today?.to || L.to;
   const sid = LEG_SCN[state.leg];
   const routeChanged = from !== L.from || to !== L.to;
-  const usual = L.time && toMin(L.time) > toMin(state.clock) ? fmt(toMin(L.time)) : state.clock;
+  /* A saved route is an OD preset: querying it starts from now. Schedule times only shape
+     the suggested leg on Today (and the Schedule tab). */
+  const usual = state.leg === state.suggested && L.time && toMin(L.time) > toMin(state.clock) ? fmt(toMin(L.time)) : state.clock;
   const leave = state.today?.time ? fmt(toMin(state.today.time)) : sid === state.scenario ? S[sid].clock : usual;
   const base = sid && !routeChanged ? shifted(S[sid], leave) : generic(from, to, leave);
   const target = state.today?.arriveBy || base.target;
@@ -356,10 +359,10 @@ function renderToday() {
   const np = state.prefs.size;
 
   const plist = [...state.prefs].map(prefLabel);
-  const prefBar = `<div class="rank-row">
-      <span class="rank-cap">Ranked by</span>
-      <button class="fchip${np ? " on" : ""}" data-act="prefs">${ICON.sliders}${np ? `${esc(plist.slice(0, 2).join(", "))}${np > 2 ? ` +${np - 2}` : ""} · this journey` : "Your default preferences"}<b class="chev">▾</b></button>
-    </div>`;
+  const topW = Object.entries(W_LABEL).map(([k, l]) => [state.defaults[k], l]).sort((a, b) => b[0] - a[0]).slice(0, 3);
+  const prefBar = np
+    ? `<div class="rank-row"><span class="rank-cap">Boosted for this journey</span><button class="fchip on" data-act="prefs">${esc(plist.slice(0, 2).join(", "))}${np > 2 ? ` +${np - 2}` : ""}<b class="chev">▾</b></button></div>`
+    : `<div class="rank-row"><span class="rank-cap">Ranked by</span><button class="fchip" data-act="prefs">${topW.map(([v, l]) => `${l} ${v}`).join(" · ")}<b class="chev">▾</b></button></div>`;
   el.innerHTML = `${header}
     ${sharing}
     <article class="search-card" aria-label="Journey for today">
@@ -382,7 +385,7 @@ function renderToday() {
         <button class="conf-pill" data-act="certainty" aria-label="How accurate are these arrival times?"><i class="c-${certainty(d.confidence).toLowerCase()}"></i>Arrivals ${CERT_RANGE[certainty(d.confidence)]}</button>
       </div>
       ${prefBar}
-      ${np ? `<p class="pref-note">For this journey only · <button class="btn link sm" data-act="save-default">Save as default</button> · <button class="btn link sm" data-act="reset-prefs">Reset</button></p>` : ""}
+      ${np ? `<p class="pref-note">Boosts apply to this journey only · <button class="btn link sm" data-act="save-default">Save as default</button> · <button class="btn link sm" data-act="reset-prefs">Reset</button></p>` : ""}
       ${d.alert.tone === "green" ? "" : `<div class="alert-card ${d.alert.tone}" role="status">
         <div class="alert-icon">!</div>
         <div><span class="source">${esc(d.alert.source)}</span><strong>${esc(d.alert.title)}</strong><p>${esc(d.alert.copy)}</p><small>Updated ${d.alert.updated} · next update ${d.alert.next}</small></div>
@@ -506,8 +509,8 @@ function renderJourneys() {
       <div class="jtop"><div><strong>${esc(j.from)} → ${esc(j.to)}</strong>${j.name ? `<small>${esc(j.name)}</small>` : ""}</div>
         <span class="sched-tag${j.days.length ? "" : " none"}">${j.days.length ? daysText(j.days) : "No schedule"}</span></div>
       <div class="leg-rows">
-        <button class="leg-row" data-act="use-leg" data-leg="${j.id}:out"><span class="lr-ic">${ICON.route}</span><span class="lr-main"><b>To ${esc(shortPlace(j.to))}</b><small>${j.out ? `Usually leaves ${fmt(toMin(j.out))}` : "Any time"}</small></span><i>›</i></button>
-        ${j.ret ? `<button class="leg-row" data-act="use-leg" data-leg="${j.id}:ret"><span class="lr-ic">${ICON.swap}</span><span class="lr-main"><b>Return to ${esc(shortPlace(j.ret.to))}</b><small>${j.ret.time ? `Usually leaves ${fmt(toMin(j.ret.time))}` : "Any time"}</small></span><i>›</i></button>` : ""}
+        <button class="leg-row" data-act="use-leg" data-leg="${j.id}:out"><span class="lr-ic">${ICON.route}</span><span class="lr-main"><b>To ${esc(shortPlace(j.to))}</b><small>Routes from now</small></span><i>›</i></button>
+        ${j.ret ? `<button class="leg-row" data-act="use-leg" data-leg="${j.id}:ret"><span class="lr-ic">${ICON.swap}</span><span class="lr-main"><b>Return to ${esc(shortPlace(j.ret.to))}</b><small>Routes from now</small></span><i>›</i></button>` : ""}
       </div>
       <button class="btn link sm jedit" data-act="edit-saved" data-id="${j.id}">Edit</button>
     </article>`).join("")
@@ -749,11 +752,12 @@ const SHEETS = {
   prefs() {
     const row = p => { const on = state.prefs.has(p.id); return `<button class="pref-row${on ? " on" : ""}" data-act="pref" data-pref="${p.id}" role="checkbox" aria-checked="${on}"><i>${on ? ICON.check : ""}</i><span>${p.label}</span></button>`; };
     const n = state.prefs.size;
-    return `<p class="overline">WHAT MATTERS ON THIS JOURNEY?</p><h3>Tune this journey</h3>
-      <p class="hint">Select all that apply · applies to this journey only</p>
+    return `<p class="overline">WHAT MATTERS ON THIS JOURNEY?</p><h3>Boost for this journey</h3>
+      <p class="hint">Routes are ranked by your default priorities from Profile. Boosts raise a priority for this journey only.</p>
       <div class="pref-list">${PREFS.map(row).join("")}</div>
       <p class="overline sl-h">MORE PREFERENCES</p>
       <div class="pref-list">${MORE_PREFS.map(row).join("")}</div>
+      <button class="btn link sm" data-act="goto-defaults">Edit default priorities in Profile ›</button>
       <button class="btn link sm" data-act="method">How recommendations work ›</button>
       <div class="sheet-actions">
         <button class="btn primary full" data-act="close-sheet">${n ? `Show options · ${n} selected` : "Show options"}</button>
@@ -1006,6 +1010,7 @@ const A = {
   },
   "end-ask": () => openSheet("endConfirm"),
   "switch-ask": b => openSheet("switchConfirm", b.dataset.id),
+  "goto-defaults": () => { closeSheet(); setTab("profile"); },
   reminder: () => {
     if (state.reminder) { state.reminder = null; renderJourney(); return; }
     if (state.locPerm === "allowed") { state.reminder = "location"; renderJourney(); toast("Arrival reminder on", "Using your location."); return; }
