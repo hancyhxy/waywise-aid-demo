@@ -473,7 +473,7 @@ function renderJourneys() {
     </header>
     <div class="segmented" role="tablist">
       <button role="tab" class="${state.jview === "list" ? "active" : ""}" data-act="jview" data-view="list">Journeys</button>
-      <button role="tab" class="${state.jview === "schedule" ? "active" : ""}" data-act="jview" data-view="schedule">Schedule <small>optional</small></button>
+      <button role="tab" class="${state.jview === "schedule" ? "active" : ""}" data-act="jview" data-view="schedule">Schedule</button>
     </div>
     ${state.jview === "list" ? `<div class="jlist">${list}</div>` : renderSchedule()}`;
 }
@@ -500,7 +500,7 @@ function renderSchedule() {
           </div></div>
       </div>`).join("") + `<button class="btn ghost sm nocommute" data-act="toggle-nocommute">No commute on this date</button>`;
   }
-  return `<p class="hint">Optional. A schedule only helps Waywise suggest the right journey; you can skip or change any single date.</p>
+  return `<p class="hint">Waywise uses your schedule to suggest the right journey. Skip or change any single date.</p>
     <div class="week-picker">${strip}</div>
     <article class="day-card"><p class="overline">${fullDate(day).toUpperCase()}</p>${body}</article>`;
 }
