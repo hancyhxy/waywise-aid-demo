@@ -59,3 +59,12 @@ python3 -m http.server 4317 --directory .
 ```
 
 No build step, dependencies or live transport API. All transport data is fictional.
+
+## v3.1 visual refresh (post-review)
+
+UI critique pass against Google Maps (route search) and Ctrip (flight search card) patterns:
+
+- **Sydney mode language.** Route legs now use Transport for NSW roundels + line pills (train `#F6891F`, metro `#168388`, bus `#00B5EF`; per TfNSW open-data brand resources, prototype use only). Red/amber/green are reserved for status text; mode colours never carry status meaning.
+- **Route cards rebuilt.** Leg chain (walk › T1 › walk) + one large Arrives time per card; Leave/Departs/Wait collapsed to one text line; crowding/seat/on-time as text-level status instead of colour-filled badges; "Recommended + why" merged into a single strip at the top of the card.
+- **Today hierarchy.** Schedule suggestion is a caption inside the search card; preference tuning collapsed into a filter-chip row (full list in a sheet); alert moved into the results section; duplicate section headings removed.
+- **Icon system.** Hand-drawn SVGs replaced with Lucide-style 2px-stroke icons; bottom nav uses house / route / person; sheet close actions say "Done" (no more "Back to routes").

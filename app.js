@@ -12,24 +12,41 @@ const fmt = m => { m = ((m % 1440) + 1440) % 1440; return `${Math.floor(m / 60)}
 const pad = t => (t && t.length === 4 ? "0" + t : t || "");
 const arrEnd = o => toMin(o.arrives.split("–").pop());
 
+/* Icon set: Lucide-style 24px / 2px stroke, consistent metrics. */
 const ICON = {
-  take: '<svg viewBox="0 0 24 24"><path d="M4 12h15M13 6l6 6-6 6"/></svg>',
-  wait: '<svg viewBox="0 0 24 24"><path d="M9 5v14M15 5v14"/></svg>',
-  switch: '<svg viewBox="0 0 24 24"><path d="M6 18L18 6M9 6h9v9"/></svg>',
-  bus: '<svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="15" rx="3"/><path d="M5 11h14M8 18v3M16 18v3"/><circle cx="8.5" cy="14.5" r=".8"/><circle cx="15.5" cy="14.5" r=".8"/></svg>',
-  walk: '<svg viewBox="0 0 24 24"><circle cx="13" cy="4" r="2"/><path d="M10 21l2-6 3 3v3M9 12l2-4 4 2 2 3M11 8l-3 2v3"/></svg>',
-  train: '<svg viewBox="0 0 24 24"><rect x="6" y="3" width="12" height="14" rx="3"/><path d="M6 10h12M9 21l1.5-4M15 21l-1.5-4"/></svg>',
-  swap: '<svg viewBox="0 0 24 24"><path d="M7 4L3 8l4 4M3 8h14M17 20l4-4-4-4M21 16H7"/></svg>',
-  check: '<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7"/></svg>',
-  warn: '<svg viewBox="0 0 24 24"><path d="M12 3l10 18H2z"/><path d="M12 10v5M12 18v.5"/></svg>',
-  back: '<svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>',
-  share: '<svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="M8.2 10.8l7.6-4.4M8.2 13.2l7.6 4.4"/></svg>',
-  flag: '<svg viewBox="0 0 24 24"><path d="M5 21V4h11l-2 4 2 4H5"/></svg>',
-  compare: '<svg viewBox="0 0 24 24"><path d="M4 7h10M4 12h16M4 17h7"/></svg>',
-  bell: '<svg viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0112 0v5l2 2H4zM10 20a2 2 0 004 0"/></svg>',
-  plus: '<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>',
-  cloud: '<svg viewBox="0 0 24 24"><path d="M7 18h10a4 4 0 00.5-8A6 6 0 006 9.5 4.3 4.3 0 007 18z"/><path d="M9.5 13.5l2 2 3.5-3.5"/></svg>'
+  walk: '<svg viewBox="0 0 24 24"><path d="M4 16v-2.38C4 11.5 2.97 10.5 3 8c.03-2.72 1.49-6 4.5-6C9.37 2 10 3.8 10 5.5c0 3.11-2 5.66-2 8.68V16a2 2 0 1 1-4 0Z"/><path d="M20 20v-2.38c0-2.12 1.03-3.12 1-5.62-.03-2.72-1.49-6-4.5-6C14.63 6 14 7.8 14 9.5c0 3.11 2 5.66 2 8.68V20a2 2 0 1 0 4 0Z"/><path d="M16 17h4"/><path d="M4 13h4"/></svg>',
+  swap: '<svg viewBox="0 0 24 24"><path d="m21 16-4 4-4-4"/><path d="M17 20V4"/><path d="m3 8 4-4 4 4"/><path d="M7 4v16"/></svg>',
+  check: '<svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>',
+  warn: '<svg viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 20h16a2 2 0 0 0 1.73-2Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>',
+  back: '<svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg>',
+  share: '<svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.59 13.51 6.83 3.98"/><path d="m15.41 6.51-6.82 3.98"/></svg>',
+  flag: '<svg viewBox="0 0 24 24"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><path d="M4 22v-7"/></svg>',
+  compare: '<svg viewBox="0 0 24 24"><path d="m16 3 4 4-4 4"/><path d="M20 7H4"/><path d="m8 21-4-4 4-4"/><path d="M4 17h16"/></svg>',
+  bell: '<svg viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>',
+  plus: '<svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></svg>',
+  cloud: '<svg viewBox="0 0 24 24"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/><path d="m9 13 2 2 4-4"/></svg>',
+  sparkle: '<svg viewBox="0 0 24 24"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/></svg>',
+  sliders: '<svg viewBox="0 0 24 24"><path d="M21 4h-7M10 4H3M21 12h-9M8 12H3M21 20h-5M12 20H3M14 2v4M8 10v4M16 18v4"/></svg>',
+  route: '<svg viewBox="0 0 24 24"><circle cx="6" cy="19" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/><circle cx="18" cy="5" r="3"/></svg>'
 };
+
+/* Transport for NSW mode language: coloured roundel + white letter, line pill in the mode colour.
+   Mode colours per TfNSW open-data brand resources (train #F6891F, metro #168388, bus #00B5EF,
+   ferry #5AB031, light rail #EE343F). Prototype use only. */
+const MODE_LETTER = { train: "T", metro: "M", bus: "B", ferry: "F", lightrail: "L" };
+const roundel = mode => `<i class="roundel r-${mode}" aria-hidden="true">${MODE_LETTER[mode] || "T"}</i>`;
+const lineCode = o => (String(o.service).match(/\b(T\d|M\d|L\d|F\d{1,2}|\d{3})\b/) || [])[0] || "";
+function legChain(o) {
+  const segs = [];
+  if (o.walkTo) segs.push(`<span class="lc-walk">${ICON.walk}${o.walkTo}</span>`);
+  const code = lineCode(o);
+  segs.push(`<span class="lc-mode">${roundel(o.mode)}${code ? `<b class="line-pill lp-${o.mode}">${code}</b>` : ""}</span>`);
+  const m2 = String(o.service).match(/then bus (\d+)/i);
+  if (m2) segs.push(`<span class="lc-mode">${roundel("bus")}<b class="line-pill lp-bus">${m2[1]}</b></span>`);
+  const w2 = Math.max(0, o.walk - o.walkTo);
+  if (w2) segs.push(`<span class="lc-walk">${ICON.walk}${w2}</span>`);
+  return `<div class="leg-chain" aria-label="Journey legs">${segs.join('<i class="lc-sep">›</i>')}</div>`;
+}
 
 /* ---------- reference data ---------- */
 const CROWD = ["", "Low", "Moderate", "High"];
@@ -310,7 +327,7 @@ function renderToday() {
   $("#clock").textContent = state.clock;
   if (!d && !state.journeys.length) { el.innerHTML = renderFirstRun(); return; }
   const header = `<header class="app-header">
-      <div><p class="overline">${DAY_NAME[state.day].toUpperCase()} · ${state.clock}</p><h2>${greet(state.clock)}</h2></div>
+      <div><p class="overline">${DAY_NAME[state.day].toUpperCase()} ${DAY_DATE[state.day]} OCT · ${state.clock}</p><h2>${greet(state.clock)}</h2></div>
       <button class="avatar" data-act="tab" data-tab="profile" aria-label="Open Profile and account">AL</button>
     </header>`;
   if (!d) {
@@ -328,20 +345,23 @@ function renderToday() {
   const rank = ranked(d), rec = rank[0], L = d.L;
   const sched = scheduledToday(state.day).find(x => x.key === state.leg && !x.skip);
   const status = state.today
-    ? (L.key ? `<p class="suggest today"><span>Changed for today only</span><button class="btn link sm" data-act="f-clear-today">Back to saved journey</button></p>`
-      : `<p class="suggest today"><span>Route for today only</span><button class="btn link sm" data-act="save-adhoc">Save as journey</button></p>`)
-    : sched && state.leg === state.suggested ? `<p class="suggest">${ICON.check}<span>Based on your ${DAY_NAME[state.day]} schedule, we recommend</span></p>`
-      : `<p class="suggest"><span>Saved journey${L.j.name ? ` · ${esc(L.j.name)}` : ""}</span></p>`;
+    ? (L.key ? `<div class="sc-cap today"><span>Changed for today only</span><button class="btn link sm" data-act="f-clear-today">Back to saved journey</button></div>`
+      : `<div class="sc-cap today"><span>Route for today only</span><button class="btn link sm" data-act="save-adhoc">Save as journey</button></div>`)
+    : sched && state.leg === state.suggested ? `<div class="sc-cap">${ICON.sparkle}<span>Suggested from your ${DAY_NAME[state.day]} schedule</span></div>`
+      : `<div class="sc-cap plain"><span>Saved journey${L.j.name ? ` · ${esc(L.j.name)}` : ""}</span></div>`;
   const active = state.phase === "active" ? selectedOption(d) : null;
   const sharing = state.sharing && state.sharing.live ? `<div class="share-banner">${ICON.share}<span>Sharing arrival updates with <b>${esc(state.sharing.to)}</b> · ${esc(state.sharing.until)}</span><button class="btn link sm" data-act="stop-share">Stop</button></div>` : "";
   const leave = fmt(Math.min(...d.options.map(o => toMin(o.leaveBy))));
   const np = state.prefs.size;
 
+  const prefBar = `<div class="filter-row" aria-label="Journey preferences">
+      <button class="fchip${np ? " on" : ""}" data-act="prefs">${ICON.sliders}${np ? `Preferences · ${np}` : "Preferences"}</button>
+      ${PREFS.map(x => `<button class="fchip${state.prefs.has(x.id) ? " on" : ""}" data-act="pref" data-pref="${x.id}" role="checkbox" aria-checked="${state.prefs.has(x.id)}">${x.label}</button>`).join("")}
+    </div>`;
   el.innerHTML = `${header}
-    ${S[state.scenario] && state.leg === S[state.scenario].leg && !state.today ? `<p class="mood">${esc(S[state.scenario].copy)}</p>` : ""}
     ${sharing}
-    ${status}
     <article class="search-card" aria-label="Journey for today">
+      ${status}
       <div class="od">
         <button class="od-field" data-act="s-open" data-focus="from" aria-label="Change start"><i class="od-dot from"></i><span><small>From</small><strong>${esc(d.from)}</strong></span></button>
         <button class="od-field" data-act="s-open" data-focus="to" aria-label="Change destination"><i class="od-dot to"></i><span><small>To</small><strong>${esc(d.to)}</strong></span></button>
@@ -354,30 +374,17 @@ function renderToday() {
       </div>
     </article>
 
-    <div class="alert-card ${d.alert.tone}" role="status">
-      <div class="alert-icon">${d.alert.tone === "green" ? ICON.check : "!"}</div>
-      <div><span class="source">${esc(d.alert.source)}</span><strong>${esc(d.alert.title)}</strong><p>${esc(d.alert.copy)}</p><small>Updated ${d.alert.updated} · next update ${d.alert.next}</small></div>
-    </div>
-
-    <section class="block">
-      <div class="section-heading">
-        <div><p class="overline">WHAT MATTERS ON THIS JOURNEY?</p><h3>Tune this journey</h3></div>
-        <button class="btn link sm" data-act="reset-prefs" ${np ? "" : "disabled"}>Reset</button>
-      </div>
-      <p class="hint">Select all that apply · applies to this journey only</p>
-      <div class="chips">${PREFS.map(prefChip).join("")}${state.showMore ? MORE_PREFS.map(prefChip).join("") : ""}
-        <button class="chip more" data-act="more-prefs">${state.showMore ? "Fewer preferences" : "More preferences"}</button></div>
-      <div class="pref-scope">
-        ${np ? `<span>For this journey: <b>${[...state.prefs].map(prefLabel).join(" · ")}</b></span><button class="btn link sm" data-act="save-default">Save as default</button>`
-      : `<span>Using your default travel preferences</span><button class="btn link sm" data-act="tab" data-tab="profile">View defaults</button>`}
-      </div>
-    </section>
-
     <section class="block results">
       <div class="section-heading">
-        <div><p class="overline">YOUR OPTIONS</p><h3>What should I do?</h3></div>
+        <h3>Route options</h3>
         <button class="info-button" data-act="method" aria-label="How recommendations work">?</button>
       </div>
+      ${prefBar}
+      ${np ? `<p class="pref-note">For this journey only: <b>${[...state.prefs].map(prefLabel).join(" · ")}</b> · <button class="btn link sm" data-act="save-default">Save as default</button> · <button class="btn link sm" data-act="reset-prefs">Reset</button></p>` : ""}
+      ${d.alert.tone === "green" ? "" : `<div class="alert-card ${d.alert.tone}" role="status">
+        <div class="alert-icon">!</div>
+        <div><span class="source">${esc(d.alert.source)}</span><strong>${esc(d.alert.title)}</strong><p>${esc(d.alert.copy)}</p><small>Updated ${d.alert.updated} · next update ${d.alert.next}</small></div>
+      </div>`}
       <div class="confidence-line">
         <button class="certainty" data-act="certainty"><i class="c-${certainty(d.confidence).toLowerCase()}"></i>Arrival estimate confidence: <b>${certainty(d.confidence)}</b> ⓘ</button>
         <span>Live data · updated ${d.alert.updated}</span>
@@ -389,7 +396,7 @@ function renderToday() {
 }
 function savedItem(l) {
   return `<button class="saved-item" data-act="use-leg" data-leg="${l.key}" data-from="${esc(norm(l.from))}" data-to="${esc(norm(l.to))}">
-    <span class="si-icon">${ICON.train}</span>
+    <span class="si-icon">${ICON.route}</span>
     <span class="si-main"><b>${esc(l.from)} → ${esc(l.to)}</b><small>${esc(l.j.name || "Saved route")}${l.dir === "ret" ? " · return" : ""}</small></span>
     <span class="si-when">${l.time ? fmt(toMin(l.time)) : ""}</span></button>`;
 }
@@ -438,30 +445,35 @@ function routeCard(o, d, rec) {
   const isRec = o.id === rec.id, live = state.phase === "active" && o.id === state.selected, late = lateBy(o, d), p = state.prefs;
   const f = on => (on ? " focus" : "");
   const cmp = compareLine(o, d), conf = conflicts(o, d);
+  const strip = live ? `<div class="rec-strip live-strip"><span class="pulse"></span>In progress</div>`
+    : isRec ? `<div class="rec-strip">${ICON.sparkle}<span><b>Recommended</b> · ${esc(reason(o, d))}</span></div>` : "";
   return `<article class="route-card${isRec ? " recommended" : ""}${live ? " live" : ""}" data-route="${o.id}" data-act="open-route" data-id="${o.id}" role="button" tabindex="0" aria-label="${esc(o.title)}: view route details">
-    ${live ? `<span class="rec-tag live-tag">In progress</span>` : isRec ? `<span class="rec-tag">Recommended</span>` : ""}
-    <div class="rc-head"><span class="kind-icon k-${o.kind}">${ICON[o.kind]}</span><div><h4>${esc(o.title)}</h4><p>${esc(o.service)}</p></div></div>
-    <div class="timegrid">
-      <div class="${f(p.has("wait"))}"><small>Wait</small><strong>${platformWait(o)} min</strong><em>on platform</em></div>
-      <div><small>Departs</small><strong>${o.departs}</strong><em>${esc(o.platform.split(",").pop().trim())}</em></div>
-      <div class="${f(p.has("sooner"))}"><small>Arrives</small><strong>${o.arrives}</strong>${late ? `<em class="late">${late} min late</em>` : d.target ? `<em class="ontime">On time</em>` : "<em>estimate</em>"}</div>
-    </div>
-    <p class="leave-line">Leave by <b>${o.leaveBy}</b> · ${o.walkTo} min walk to ${esc(o.platform)}</p>
-    ${cmp ? `<p class="compare-line">${cmp}</p>` : ""}
-    <div class="badges">
-      <span class="badge crowd-${o.crowd}${f(p.has("seat"))}">Crowding: ${CROWD[o.crowd]}</span>
-      <span class="badge ${seatTone(o.seat)}${f(p.has("seat"))}">${SEAT[o.seat]}</span>
-      <span class="badge${f(p.has("walk"))}">${ICON.walk}${o.walk} min walk</span>
-      <span class="badge${f(p.has("transfer"))}">${o.transfers ? `${o.transfers} transfer` : "Direct"}</span>
-      <span class="badge ${relTone(o.reliability)}${f(p.has("reliable"))}">${o.reliability}% on time</span>
-    </div>
-    ${isRec ? `<p class="reason"><b>Why:</b> ${esc(reason(o, d))}</p>` : ""}
-    <button class="why-link" data-act="why" data-id="${o.id}">Why this route? ›</button>
-    ${conf.map(c => `<p class="conflict">${ICON.warn}<span>${esc(c)}</span></p>`).join("")}
-    <div class="rc-actions">
-      ${live ? `<button class="btn primary sm" data-act="open-active">View journey</button>`
-      : state.phase === "active" ? `<button class="btn primary sm" data-act="switch-to" data-id="${o.id}">Switch</button><button class="btn ghost sm" data-act="open-route" data-id="${o.id}">View details</button>`
-        : `<button class="btn primary sm" data-act="start-route" data-id="${o.id}">Start</button><button class="btn ghost sm" data-act="open-route" data-id="${o.id}">View details</button>`}
+    ${strip}
+    <div class="rc-body">
+      <div class="rc-top">
+        <div class="rc-main">
+          ${legChain(o)}
+          <h4>${esc(o.title)}</h4>
+          <p class="rc-sub">${esc(o.service)}</p>
+        </div>
+        <div class="rc-arrive${f(p.has("sooner"))}"><small>Arrives</small><strong class="${o.arrives.length > 5 ? "range" : ""}${late ? " late" : ""}">${o.arrives}</strong>${late ? `<em class="late">${late} min late</em>` : d.target ? `<em class="ontime">On time</em>` : "<em>estimate</em>"}</div>
+      </div>
+      <p class="rc-times">Leave by <b>${o.leaveBy}</b> · departs <b>${o.departs}</b> · ${esc(o.platform.split(",").pop().trim())} · ${platformWait(o)} min wait</p>
+      ${cmp ? `<p class="compare-line">${cmp}</p>` : ""}
+      <div class="rc-status">
+        <span class="st crowd-${o.crowd}${f(p.has("seat"))}"><i></i>${CROWD[o.crowd]} crowding</span>
+        <span class="st ${seatTone(o.seat)}${f(p.has("seat"))}">${SEAT[o.seat]}</span>
+        <span class="st${f(p.has("walk"))}">${o.walk} min walk</span>
+        <span class="st${f(p.has("transfer"))}">${o.transfers ? `${o.transfers} transfer` : "Direct"}</span>
+        <span class="st ${relTone(o.reliability)}${f(p.has("reliable"))}">${o.reliability}% on time</span>
+      </div>
+      ${conf.map(c => `<p class="conflict">${ICON.warn}<span>${esc(c)}</span></p>`).join("")}
+      <div class="rc-foot">
+        <button class="why-link" data-act="why" data-id="${o.id}">Why this route? ›</button>
+        ${live ? `<button class="btn primary sm" data-act="open-active">View journey</button>`
+      : state.phase === "active" ? `<button class="btn ghost sm" data-act="open-route" data-id="${o.id}">Details</button><button class="btn primary sm" data-act="switch-to" data-id="${o.id}">Switch</button>`
+        : `<button class="btn ghost sm" data-act="open-route" data-id="${o.id}">Details</button><button class="btn primary sm" data-act="start-route" data-id="${o.id}">Start</button>`}
+      </div>
     </div>
   </article>`;
 }
@@ -614,7 +626,7 @@ function carriageDiagram(o, d) {
 function legsTimeline(o, d) {
   const steps = [
     { icon: ICON.walk, t: `Walk ${o.walkTo} min to ${o.platform}`, s: `Leave ${d.from} by ${o.leaveBy}` },
-    { icon: o.mode === "bus" ? ICON.bus : ICON.train, t: o.service, s: `Departs ${o.departs} · about ${o.ride} min${o.transfers ? ` · ${o.transfers} transfer` : ""}` },
+    { icon: roundel(o.mode), t: o.service, s: `Departs ${o.departs} · about ${o.ride} min${o.transfers ? ` · ${o.transfers} transfer` : ""}` },
     { icon: ICON.walk, t: `Walk ${Math.max(0, o.walk - o.walkTo)} min to ${d.to}`, s: `Arrive ${o.arrives} (estimate)` }
   ];
   return `<ol class="timeline">${steps.map(s => `<li><span class="tl-icon">${s.icon}</span><div><strong>${esc(s.t)}</strong><small>${esc(s.s)}</small></div></li>`).join("")}</ol>`;
@@ -735,7 +747,7 @@ const SHEETS = {
         <small>${esc(d.alert.source)} · updated ${d.alert.updated}. Seat chances are predictions, not guarantees.</small></div>
       <div class="sheet-actions">
         <button class="btn primary full" data-act="open-route" data-id="${o.id}">View details</button>
-        <button class="btn ghost full" data-act="close-sheet">Back to routes</button>
+        <button class="btn ghost full" data-act="close-sheet">Done</button>
       </div>`;
   },
   prefs() {
@@ -763,7 +775,7 @@ const SHEETS = {
       <div class="method-item"><span>2</span><div><strong>Your choices for this journey</strong><p>Quick choices on Today override your defaults for this journey only.</p></div></div>
       <div class="method-item"><span>3</span><div><strong>Your default travel preferences</strong><p>Set in Profile. They apply to every new journey.</p></div></div>
       <div class="method-item"><span>4</span><div><strong>Arrival estimate confidence</strong><p>How closely arrival times and crowding are likely to match what's shown.</p></div></div>
-      <button class="btn ghost full" data-act="close-sheet">Back to routes</button>`;
+      <button class="btn ghost full" data-act="close-sheet">Done</button>`;
   },
   certainty() {
     const d = current(), c = certainty(d.confidence);
@@ -772,7 +784,7 @@ const SHEETS = {
       <p class="sheet-lede">${esc(d.why)}</p>
       <ul class="legend-list"><li><b>High</b> usually within 2 min</li><li><b>Medium</b> could be about 5 min different</li><li><b>Low</b> treat as a rough guide</li></ul>
       <p class="hint">${esc(d.alert.source)} · updated ${d.alert.updated} · next update ${d.alert.next}</p>
-      <button class="btn ghost full" data-act="close-sheet">Back to routes</button>`;
+      <button class="btn ghost full" data-act="close-sheet">Done</button>`;
   },
   compare(mode) {
     const d = current(), cur = focusOption(d);
