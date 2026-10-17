@@ -370,7 +370,7 @@ function renderToday() {
         <button class="swap-fab" data-act="swap-dir" aria-label="Swap to the return direction">${ICON.swap}</button>
       </div>
       <div class="when">
-        <button data-act="edit-today"><small>Leave</small><strong>Today · ${leave}</strong></button>
+        <button data-act="edit-today"><small>Leave</small><strong>${!state.today?.time && toMin(leave) <= toMin(state.clock) ? "Now" : `Today · ${leave}`}</strong></button>
         <button data-act="edit-today"><small>${d.targetLabel === "shift start" ? "Shift starts" : "Arrive by"}</small><strong>${d.target || "Any time"}</strong></button>
       </div>
     </article>
@@ -898,10 +898,10 @@ function journeyForm(mode) {
   }
   if (mode === "edit-today") {
     return `<p class="overline">TODAY ONLY</p><h3>Time for this journey</h3>
-      <div class="field-row"><label class="field"><span>Leave from</span><input type="time" data-f="time" value="${pad(f.time)}"></label><label class="field"><span>Arrive by (optional)</span><input type="time" data-f="arriveBy" value="${pad(f.arriveBy)}"></label></div>
+      <div class="field-row"><label class="field"><span>Leave at</span><input type="time" data-f="time" value="${pad(f.time)}"></label><label class="field"><span>Arrive by (optional)</span><input type="time" data-f="arriveBy" value="${pad(f.arriveBy)}"></label></div>
       <p class="scope-note">Only today's trip changes. Your saved journey and schedule stay the same.</p>
       ${err}
-      <div class="sheet-actions"><button class="btn primary full" data-act="f-save-today">Use for today</button>${state.today ? `<button class="btn link full" data-act="f-clear-today">Go back to the saved journey</button>` : ""}<button class="btn ghost full" data-act="close-sheet">Cancel</button></div>`;
+      <div class="sheet-actions"><button class="btn primary full" data-act="f-save-today">Use for today</button>${state.today?.time ? `<button class="btn link full" data-act="f-now">Leave now</button>` : ""}${state.today ? `<button class="btn link full" data-act="f-clear-today">Go back to the saved journey</button>` : ""}<button class="btn ghost full" data-act="close-sheet">Cancel</button></div>`;
   }
   return "";
 }
@@ -1124,6 +1124,12 @@ const A = {
     state.selected = null; state.phase = "options";
     closeSheet(); renderAll();
     toast("Changed for today", "Your saved journey is unchanged.");
+  },
+  "f-now": () => {
+    const t = { ...(state.today || {}) }; delete t.time;
+    state.today = Object.keys(t).some(k => t[k]) ? t : null;
+    state.selected = null; state.phase = "options";
+    closeSheet(); renderAll(); toast("Leaving now");
   },
   "f-clear-today": () => { state.today = null; closeSheet(); renderAll(); }
 };
