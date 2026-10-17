@@ -30,7 +30,8 @@ const ICON = {
   sliders: '<svg viewBox="0 0 24 24"><path d="M21 4h-7M10 4H3M21 12h-9M8 12H3M21 20h-5M12 20H3M14 2v4M8 10v4M16 18v4"/></svg>',
   route: '<svg viewBox="0 0 24 24"><circle cx="6" cy="19" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/><circle cx="18" cy="5" r="3"/></svg>',
   go: '<svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>',
-  clock: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>'
+  clock: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>',
+  chevD: '<svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>'
 };
 
 /* Transport for NSW mode language: coloured roundel + white letter, line pill in the mode colour.
@@ -355,10 +356,9 @@ function renderToday() {
   const np = state.prefs.size;
 
   const plist = [...state.prefs].map(prefLabel);
-  const hi = Object.entries(W_LABEL).filter(([k]) => state.defaults[k] >= 8).map(([, l]) => l);
   const prefBar = np
-    ? `<div class="rank-row"><span class="rank-cap">Preferences for this trip</span><button class="fchip on" data-act="prefs">${esc(plist.slice(0, 2).join(", "))}${np > 2 ? ` +${np - 2}` : ""}<b class="chev">▾</b></button></div>`
-    : `<div class="rank-row"><span class="rank-cap">Ranked by</span><button class="fchip" data-act="prefs">${hi.length ? hi.join(" · ") : "Default preferences"}<b class="chev">▾</b></button></div>`;
+    ? `<div class="rank-row"><span class="rank-cap">Your preferences</span><button class="fchip on" data-act="prefs">${esc(plist.slice(0, 2).join(", "))}${np > 2 ? ` +${np - 2}` : ""}<b class="chev">▾</b></button></div>`
+    : `<div class="rank-row"><span class="rank-cap">Your preferences</span><button class="fchip" data-act="prefs">Set what matters<b class="chev">▾</b></button></div>`;
   el.innerHTML = `${header}
     ${sharing}
     <article class="search-card" aria-label="Journey for today">
@@ -381,7 +381,6 @@ function renderToday() {
         <button class="conf-pill" data-act="certainty" aria-label="How accurate are these arrival times?"><i class="c-${certainty(d.confidence).toLowerCase()}"></i>Arrivals ${CERT_RANGE[certainty(d.confidence)]}</button>
       </div>
       ${prefBar}
-      ${np ? `<p class="pref-note">Applies to this trip only · <button class="btn link sm" data-act="save-default">Save as default</button> · <button class="btn link sm" data-act="reset-prefs">Reset</button></p>` : ""}
       ${d.alert.tone === "green" ? "" : `<div class="alert-card ${d.alert.tone}" role="status">
         <div class="alert-icon">!</div>
         <div><span class="source">${esc(d.alert.source)}</span><strong>${esc(d.alert.title)}</strong><p>${esc(d.alert.copy)}</p><small>Updated ${d.alert.updated} · next update ${d.alert.next}</small></div>
@@ -464,7 +463,7 @@ function routeCard(o, d, rec) {
     : isRec ? `<div class="rec-strip">${ICON.sparkle}<span><b>Recommended · ${actionPhrase(o)}</b> — ${reasonShort(o, d)}</span></div>` : "";
   const mid = live
     ? `<div class="jprog-cap"><b>${STAGES[state.stage]}</b><span>arrives <b>${o.arrives}</b></span></div>
-      <div class="jprog" role="img" aria-label="Journey progress: ${STAGES[state.stage]}"><span style="width:${journeyProgress()}%"></span><i></i><i></i></div>`
+      <ol class="stepper mini" aria-label="Journey progress">${STAGES.map((st, i) => `<li class="${i < state.stage ? "done" : i === state.stage ? "now" : ""}"><i>${i < state.stage ? ICON.check : i + 1}</i></li>`).join("")}</ol>`
     : `<p class="rc-times">Leave by <b>${o.leaveBy}</b> · ${esc(o.platform.split(",").pop().trim())}</p>`;
   return `<article class="route-card${isRec ? " recommended" : ""}${live ? " live" : ""}" data-route="${o.id}" data-act="open-route" data-id="${o.id}" role="button" tabindex="0" aria-label="${esc(o.title)}: view route details">
     ${strip}
@@ -580,27 +579,21 @@ const SLIDERS = [
 ];
 const MODES = [["train", "Train"], ["metro", "Metro"], ["bus", "Bus"], ["ferry", "Ferry"], ["lightrail", "Light rail"]];
 const dirty = () => JSON.stringify(state.defaults) !== JSON.stringify(state.savedDefaults);
-const LEVELS = [[2, "Low"], [5, "Medium"], [9, "High"]];
-const levelOf = v => (v >= 8 ? "High" : v >= 4 ? "Medium" : "Low");
-function prefLevelRow(x) {
-  const v = state.defaults[x.k];
-  return `<div class="prow"><div class="prow-top"><label><strong>${x.t}</strong><small>${x.s}</small></label></div>
-    <div class="segmented three">${LEVELS.map(([val, l]) => `<button class="${levelOf(v) === l ? "active" : ""}" data-act="set-level" data-k="${x.k}" data-v="${val}" aria-pressed="${levelOf(v) === l}">${l}</button>`).join("")}</div></div>`;
-}
 const profileSub = (title, body) => `
   <header class="app-header subpage">
     <button class="back-btn" data-act="pview" data-view="home" aria-label="Back to Profile">${ICON.back}</button>
     <div><p class="overline">PROFILE</p><h2>${title}</h2></div>
   </header>${body}`;
 function profilePrefs() {
+  const row = p => { const on = state.prefs.has(p.id); return `<button class="pref-row${on ? " on" : ""}" data-act="pref" data-pref="${p.id}" role="checkbox" aria-checked="${on}"><i>${on ? ICON.check : ""}</i><span>${p.label}</span></button>`; };
   return profileSub("Travel preferences", `
-    <p class="hint">How much each factor matters when routes are ranked. Saved automatically; quick picks on Today affect that trip only.</p>
-    <article class="pref-group">${[...SLIDERS, { k: "wait", t: "Less waiting", s: "Shorter waits on the platform or at the stop" }].map(prefLevelRow).join("")}</article>
+    <p class="hint">What matters when routes are ranked. The same preferences apply on every journey — you can also change them from Today.</p>
+    <article class="pref-group"><div class="pref-list">${[...PREFS, MORE_PREFS[0]].map(row).join("")}</div></article>
     <div class="pref-card"><strong>Transport modes</strong><small>Turn off modes you'd rather not use. We'll explain if no route avoids them.</small>
       <div class="mode-chips">${MODES.map(([k, l]) => `<button class="chip${state.defaults.modes[k] ? " active" : ""}" data-act="mode" data-mode="${k}" role="checkbox" aria-checked="${state.defaults.modes[k]}"><i>${state.defaults.modes[k] ? ICON.check : ""}</i>${l}</button>`).join("")}</div>
     </div>
     <button class="btn link sm" data-act="method">How recommendations work ›</button>
-    <button class="btn link sm" data-act="reset-defaults">Reset to defaults</button>`);
+    <button class="btn link sm" data-act="reset-defaults">Reset preferences</button>`);
 }
 function profileAlerts() {
   return profileSub("Alerts &amp; notifications", `
@@ -616,7 +609,7 @@ function renderProfile() {
     <article class="account-card">
       <div class="acc-row">${ICON.cloud}<div><strong>Saved to your account</strong><small>alex.commuter@email.com · syncs across your devices</small></div></div>
       <button class="row-link" data-act="tab" data-tab="journeys"><span>Saved journeys</span><b>${state.journeys.length}</b><i>›</i></button>
-      <button class="row-link" data-act="pview" data-view="prefs"><span>Travel preferences</span><b>${Object.entries(W_LABEL).filter(([k]) => state.defaults[k] >= 8).map(([, l]) => l).join(", ") || "Balanced"}</b><i>›</i></button>
+      <button class="row-link" data-act="pview" data-view="prefs"><span>Travel preferences</span><b>${state.prefs.size ? [...state.prefs].slice(0, 2).map(prefLabel).join(", ") + (state.prefs.size > 2 ? ` +${state.prefs.size - 2}` : "") : "Not set"}</b><i>›</i></button>
       <button class="row-link" data-act="pview" data-view="alerts"><span>Alerts &amp; notifications</span><b>${state.actionable ? "Actionable only" : "All"}</b><i>›</i></button>
     </article>
     <section class="block demo-only">
@@ -653,7 +646,7 @@ function legsTimeline(o, d) {
 function whyDetails(o, d) {
   const conf = conflicts(o, d), c = certainty(d.confidence), p = [...state.prefs];
   return `<details class="why-details"><summary>Why this route?</summary>
-    <p class="sheet-lede">${p.length ? `Ranked with your picks for this trip (<b>${p.map(prefLabel).join(", ")}</b>). ` : ""}${esc(reason(o, d))}</p>
+    <p class="sheet-lede">${p.length ? `Ranked with your preferences (<b>${p.map(prefLabel).join(", ")}</b>). ` : ""}${esc(reason(o, d))}</p>
     ${conf.map(x => `<p class="conflict">${ICON.warn}<span>${esc(x)}</span></p>`).join("")}
     <div class="why-block"><strong>The trade-off</strong><p>${esc(tradeoff(o, d))}</p></div>
     <div class="why-block"><strong>How reliable is this estimate?</strong>
@@ -700,7 +693,7 @@ function renderJourney() {
     : started ? `<button class="btn primary full" data-act="switch-ask" data-id="${o.id}">Switch to this route</button>`
       : `<button class="btn primary full" data-act="start">Start journey</button>`;
   el.innerHTML = `
-    <div class="drawer-top"><button class="grab" data-act="close-drawer" aria-label="${live ? "Collapse" : "Close"}"></button><button class="drawer-x" data-act="close-drawer" aria-label="${live ? "Collapse to mini bar" : "Close"}">${live ? "⌄" : "×"}</button></div>
+    <div class="drawer-top"><button class="grab" data-act="close-drawer" aria-label="${live ? "Collapse" : "Close"}"></button><button class="drawer-x" data-act="close-drawer" aria-label="${live ? "Collapse to mini bar" : "Close"}">${live ? ICON.chevD : "×"}</button></div>
     <p class="overline">${live ? "YOUR JOURNEY" : "ROUTE DETAILS"}</p>
     <h2 class="title">${esc(o.title)}</h2>
     <p class="muted">${esc(d.from)} → ${esc(d.to)}</p>
@@ -753,13 +746,14 @@ const SHEETS = {
   prefs() {
     const row = p => { const on = state.prefs.has(p.id); return `<button class="pref-row${on ? " on" : ""}" data-act="pref" data-pref="${p.id}" role="checkbox" aria-checked="${on}"><i>${on ? ICON.check : ""}</i><span>${p.label}</span></button>`; };
     const n = state.prefs.size;
-    return `<p class="overline">PREFERENCES · THIS TRIP ONLY</p><h3>What matters on this trip?</h3>
-      <p class="hint">Your picks re-rank today's routes only. Defaults live in Profile → Travel preferences.</p>
+    return `<p class="overline">YOUR PREFERENCES</p><h3>What matters to you?</h3>
+      <p class="hint">Applies to every journey. Change any time, here or in Profile.</p>
       <div class="pref-list">${PREFS.map(row).join("")}</div>
       <p class="overline sl-h">MORE</p>
       <div class="pref-list">${MORE_PREFS.map(row).join("")}</div>
       <div class="sheet-actions">
         <button class="btn primary full" data-act="close-sheet">Done${n ? ` · ${n} selected` : ""}</button>
+        ${n ? `<button class="btn link sm" data-act="reset-prefs">Clear all</button>` : ""}
       </div>`;
   },
   switchConfirm(id) {
@@ -778,9 +772,8 @@ const SHEETS = {
   method() {
     return `<p class="overline">HOW RECOMMENDATIONS WORK</p><h3>Useful detail, not a black box</h3>
       <div class="method-item"><span>1</span><div><strong>Current conditions</strong><p>Delays, frequency, crowding and when the data was last updated. Operator updates are labelled separately from Waywise predictions.</p></div></div>
-      <div class="method-item"><span>2</span><div><strong>Your preferences for this trip</strong><p>Quick picks on Today re-rank that trip only.</p></div></div>
-      <div class="method-item"><span>3</span><div><strong>Your default preferences</strong><p>Set in Profile → Travel preferences. They apply to every new trip.</p></div></div>
-      <div class="method-item"><span>4</span><div><strong>Arrival estimate confidence</strong><p>How closely arrival times and crowding are likely to match what's shown.</p></div></div>
+      <div class="method-item"><span>2</span><div><strong>Your preferences</strong><p>One set, applied to every journey. Change them from Today or Profile.</p></div></div>
+      <div class="method-item"><span>3</span><div><strong>Arrival estimate confidence</strong><p>How closely arrival times and crowding are likely to match what's shown.</p></div></div>
       <button class="btn ghost full" data-act="close-sheet">Done</button>`;
   },
   certainty() {
@@ -953,7 +946,7 @@ function renderAll() {
 function setTab(tab) { state.tab = tab; state.overlay = null; show(); $(`#screen-${tab}`).scrollTop = 0; }
 function openOverlay(name) { state.overlay = name; show(); $(`#screen-${name}`).scrollTop = 0; }
 
-function resetJourneyState() { state.prefs = new Set(); state.selected = null; state.preview = null; state.phase = "options"; state.stage = 0; state.today = null; state.sharing = null; state.reports = []; state.overlay = null; }
+function resetJourneyState() { state.selected = null; state.preview = null; state.phase = "options"; state.stage = 0; state.today = null; state.sharing = null; state.reports = []; state.overlay = null; }
 /* If today's suggested journey is skipped or the day is marked "No commute", Today goes back to an empty card. */
 function syncSuggestion() {
   if (state.leg && state.leg === state.suggested && !state.today && !scheduledToday(state.day).some(l => l.key === state.leg && !l.skip)) { state.leg = null; state.suggested = null; resetJourneyState(); }
@@ -964,13 +957,13 @@ function useLeg(key) {
   state.leg = key; resetJourneyState();
   const L = legInfo(key);
   setTab("today");
-  if (changed) toast(`${L.from} → ${L.to}`, "Today's choices were reset for this journey.");
+  if (changed) toast(`${L.from} → ${L.to}`, "Showing routes for this journey.");
 }
 function setScenario(id) {
   id = SCN_ALIAS[id] || id;
   if (id !== "newuser" && !S[id]) return;
   state.scenario = id; resetJourneyState();
-  state.occ = clone(SEED_OCC); state.noCommute = new Set(); state.form = {}; state.pview = "home";
+  state.occ = clone(SEED_OCC); state.noCommute = new Set(); state.form = {}; state.pview = "home"; state.prefs = new Set();
   if (id === "newuser") { state.journeys = []; state.leg = null; state.day = "tue"; state.clock = "08:40"; state.schedDay = "tue"; }
   else { const s = S[id]; state.journeys = clone(SEED_JOURNEYS); state.day = s.day; state.leg = scheduledToday(s.day).some(l => l.key === s.leg && !l.skip) ? s.leg : null; state.suggested = state.leg; state.clock = s.clock; state.schedDay = s.day; }
   $$(".demo-notes .scenario").forEach(b => b.classList.toggle("active", b.dataset.scenario === id));
@@ -983,33 +976,19 @@ let navTimer;
 const A = {
   tab: b => setTab(b.dataset.tab),
   "close-sheet": () => closeSheet(),
-  pref: b => { const k = b.dataset.pref; state.prefs.has(k) ? state.prefs.delete(k) : state.prefs.add(k); renderToday(); refreshSheet(); },
+  pref: b => { const k = b.dataset.pref; state.prefs.has(k) ? state.prefs.delete(k) : state.prefs.add(k); renderAll(); refreshSheet(); },
   "more-prefs": () => { state.showMore = !state.showMore; renderToday(); },
   "reset-prefs": () => { state.prefs = new Set(); renderToday(); refreshSheet(); },
   "prefer-ontime": () => { state.prefs.delete("seat"); state.prefs.add("sooner"); renderToday(); },
-  "save-default": () => {
-    const map = { sooner: ["time", 10], seat: ["seat", 9], walk: ["walk", 9], transfer: ["transfer", 9], reliable: ["reliability", 10], wait: ["wait", 8] };
-    state.prefs.forEach(k => { if (map[k]) state.defaults[map[k][0]] = Math.max(state.defaults[map[k][0]], map[k][1]); if (k === "nobus") state.defaults.modes.bus = false; if (k === "nometro") state.defaults.modes.metro = false; });
-    state.savedDefaults = clone(state.defaults);
-    toast("Saved as default", "Applies to new journeys. Manage in Profile.", { act: "goto-defaults", label: "View" });
-    renderAll();
-  },
   method: () => openSheet("method"),
   certainty: () => openSheet("certainty"),
   pview: b => { state.pview = b.dataset.view; renderProfile(); $("#screen-profile").scrollTop = 0; },
-  "set-level": b => { state.defaults[b.dataset.k] = +b.dataset.v; state.savedDefaults = clone(state.defaults); renderProfile(); renderToday(); },
   "start-route": b => { state.preview = b.dataset.id; A.start(); },
   "open-route": b => { state.preview = b.dataset.id; closeSheet(); openOverlay("details"); },
   "back-routes": () => { state.overlay = null; show(); },
   "close-drawer": () => { state.overlay = null; show(); },
-  "undo-start": () => {
-    if (state.phase !== "active") return;
-    state.preview = state.selected; state.selected = null; state.phase = "options"; state.stage = 0; state.reminder = null;
-    $("#toast").classList.remove("show"); openOverlay("details"); toast("Journey not started", "Nothing changed. Start when you're ready.");
-  },
   "end-ask": () => openSheet("endConfirm"),
   "switch-ask": b => openSheet("switchConfirm", b.dataset.id),
-  "goto-defaults": () => { closeSheet(); state.pview = "prefs"; setTab("profile"); },
   reminder: () => {
     if (state.reminder) { state.reminder = null; renderJourney(); return; }
     if (state.locPerm === "allowed") { state.reminder = "location"; renderJourney(); toast("Arrival reminder on", "Using your location."); return; }
@@ -1022,7 +1001,7 @@ const A = {
     else { state.locPerm = v === "once" ? "once" : "allowed"; state.reminder = "location"; toast("Arrival reminder on", "Using your location only on this device."); }
     renderJourney(); renderMini();
   },
-  start: () => { state.selected = state.preview; state.phase = "active"; state.stage = 0; state.reminder = null; openOverlay("details"); toast("Journey started", state.alertsOn ? "We'll alert you if anything changes." : "Alerts are off for this journey.", { act: "undo-start", label: "Undo" }); },
+  start: () => { state.selected = state.preview; state.phase = "active"; state.stage = 0; state.reminder = null; openOverlay("details"); toast("Journey started", state.alertsOn ? "We'll alert you if anything changes." : "Alerts are off for this journey."); },
   "open-active": () => { state.preview = state.selected; openOverlay("details"); },
   advance: () => { state.stage = Math.min(3, state.stage + 1); if (state.stage === 3 && state.sharing?.live && state.sharing.until === "Until I arrive") { state.sharing = null; toast("Sharing stopped", "You've arrived, so arrival updates ended automatically."); } renderAll(); },
   end: () => { const wasSharing = state.sharing?.live; closeSheet(); resetJourneyState(); state.reminder = null; setTab("today"); toast("Journey ended", wasSharing ? "Arrival updates stopped." : ""); },
@@ -1087,7 +1066,7 @@ const A = {
   "toggle-nocommute": () => { const d = state.schedDay; state.noCommute.has(d) ? state.noCommute.delete(d) : state.noCommute.add(d); syncSuggestion(); renderAll(); },
   "mode": b => { const k = b.dataset.mode; state.defaults.modes[k] = !state.defaults.modes[k]; state.savedDefaults = clone(state.defaults); renderProfile(); renderToday(); },
   "save-defaults": () => { state.savedDefaults = clone(state.defaults); renderAll(); toast("Preferences saved", "Saved to your account. Applies to new journeys."); },
-  "reset-defaults": () => { state.defaults = clone(DEFAULTS); state.savedDefaults = clone(DEFAULTS); renderAll(); toast("Reset to defaults", "Applies to new journeys."); },
+  "reset-defaults": () => { state.prefs = new Set(); state.defaults = clone(DEFAULTS); state.savedDefaults = clone(DEFAULTS); renderAll(); toast("Preferences reset"); },
   "quick-save": () => {
     const from = $("#q-from").value.trim(), to = $("#q-to").value.trim();
     if (!from || !to) { $("#q-error").textContent = "Add where you start and where you're going."; return; }

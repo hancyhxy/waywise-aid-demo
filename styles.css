@@ -739,3 +739,11 @@ body.export .demo-notes { display:none; }
 .jprog-cap > b { font-size:13px; }
 .mini-bar .jprog.mini { height:3px; margin-top:6px; background:rgba(255,255,255,.22); }
 .mini-bar .jprog.mini > span { background:#7fd49c; }
+
+/* ---------- v4.4: mini stepper on live card, drawer-x alignment ---------- */
+.stepper.mini { margin:8px 0 0; }
+.stepper.mini i { width:20px; height:20px; font-size:10px; }
+.stepper.mini i svg { width:11px; height:11px; }
+.stepper.mini li:not(:last-child)::after { top:9px; left:calc(50% + 12px); right:calc(-50% + 12px); }
+.drawer-x { top:8px; right:16px; }
+.drawer-x svg { width:17px; height:17px; }
