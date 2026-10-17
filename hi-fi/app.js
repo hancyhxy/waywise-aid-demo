@@ -422,7 +422,6 @@ function renderToday() {
 }
 function savedItem(l) {
   return `<button class="saved-item" data-act="use-leg" data-leg="${l.key}" data-from="${esc(norm(l.from))}" data-to="${esc(norm(l.to))}">
-    <span class="si-icon">${ICON.route}</span>
     <span class="si-main"><b>${esc(l.from)} → ${esc(l.to)}</b><small>${esc(l.j.name || "Saved journey")}</small></span>
     <span class="si-when">${l.time && legDays(l.j).length ? fmt(toMin(l.time)) : ""}</span></button>`;
 }
@@ -446,9 +445,8 @@ function openSearch(focus) {
     <div class="sl-body">
       <button class="btn primary full s-go" data-act="s-go" hidden>Show options for this route</button>
       ${today.length ? `<p class="overline sl-h">TODAY · ${DAY_NAME[state.day].toUpperCase()}</p><div class="saved-list">${today.map(l => savedItem(l)).join("")}</div>` : ""}
-      ${others.length ? `<p class="overline sl-h">OTHER SAVED JOURNEYS</p><div class="saved-list">${others.map(l => savedItem(l)).join("")}</div>` : ""}
+      <p class="overline sl-h">OTHER SAVED JOURNEYS</p><div class="saved-list">${others.map(l => savedItem(l)).join("")}<button class="trip-add" data-act="add-journey">${ICON.plus} Add journey</button></div>
       <p class="no-match" hidden>No saved journey matches. Tap “Show options” to plan this route for this journey only.</p>
-      <button class="btn link sm sl-add" data-act="add-journey">${ICON.plus} Add journey</button>
     </div>`;
   lay.classList.add("open");
   filterSaved(true);
@@ -548,14 +546,15 @@ function renderFirstRun() {
 /* Journeys view: a flat list of one-way journeys (TripView pattern). Tap = routes now; Edit = one sheet. */
 function renderJourneys() {
   const el = $("#screen-journeys"), list = state.jview === "list";
-  const cards = state.journeys.length ? `<article class="trip-list">${state.journeys.map(j => `
+  const cards = state.journeys.length ? `<div class="list-head"><p class="overline">${state.journeys.length} JOURNEYS</p><button class="btn link sm" data-act="add-journey">${ICON.plus} Add</button></div>
+    <article class="trip-list">${state.journeys.map(j => `
     <div class="trip-row">
       <button class="trip-main" data-act="use-leg" data-leg="${j.id}" aria-label="Show routes from ${esc(j.from)} to ${esc(j.to)} now">
         <b>${esc(j.from)} → ${esc(j.to)}</b>
         <small class="${hasSchedule(j) ? "on" : ""}">${j.name ? `${esc(j.name)} · ` : ""}${legSched(j)}</small>
       </button>
       <button class="trip-edit" data-act="edit-saved" data-id="${j.id}" aria-label="Edit ${esc(j.from)} to ${esc(j.to)}">Edit</button>
-    </div>`).join("")}</article>
+    </div>`).join("")}<button class="trip-add" data-act="add-journey">${ICON.plus} Add journey</button></article>
     <p class="hint">Tap a journey to see routes now. Repeat days are optional.</p>`
     : `<article class="empty-card"><strong>No saved journeys yet</strong><p>Save a route once and reuse it any day. Repeat days are optional.</p><button class="btn primary sm" data-act="add-journey">${ICON.plus} Add journey</button></article>`;
   el.innerHTML = `
@@ -566,7 +565,7 @@ function renderJourneys() {
       <button role="tab" class="${list ? "active" : ""}" data-act="jview" data-view="list">Journeys</button>
       <button role="tab" class="${list ? "" : "active"}" data-act="jview" data-view="schedule">Schedule</button>
     </div>
-    ${list ? `<div class="jlist">${state.journeys.length ? `<button class="btn ghost full add-journey-row" data-act="add-journey">${ICON.plus} Add journey</button>` : ""}${cards}</div>` : renderSchedule()}`;
+    ${list ? `<div class="jlist">${cards}</div>` : renderSchedule()}`;
 }
 function renderSchedule() {
   const day = state.schedDay, dn = DAY_NAME[day], legs = scheduledToday(day);
@@ -900,12 +899,11 @@ function journeyForm(mode) {
     const items = state.journeys.map(j => {
       const full = legDays(j).includes(day);
       const sub = full ? `Already on ${dn}s` : `${j.name ? `${esc(j.name)} · ` : ""}${legSched(j)}`;
-      return `<button class="saved-item" data-act="pick-journey" data-id="${j.id}" ${full ? "disabled" : ""}><span class="si-icon">${ICON.route}</span><span class="si-main"><b>${esc(j.from)} → ${esc(j.to)}</b><small>${sub}</small></span><i class="si-chev">›</i></button>`;
+      return `<button class="saved-item" data-act="pick-journey" data-id="${j.id}" ${full ? "disabled" : ""}><span class="si-main"><b>${esc(j.from)} → ${esc(j.to)}</b><small>${sub}</small></span><i class="si-chev">›</i></button>`;
     }).join("");
     return `<p class="overline">SCHEDULE · ${dn.toUpperCase()}</p><h3>Add to ${dn}</h3>
       <p class="hint">${items ? `Pick a saved journey. It repeats every ${dn}; you can still change or remove a single date.` : "Add a journey first."}</p>
-      ${items ? `<div class="saved-list">${items}</div>` : ""}
-      <button class="btn ${items ? "link" : "primary"} sm sl-add" data-act="add-journey" data-day="${day}">${ICON.plus} New journey</button>`;
+      <div class="saved-list">${items}<button class="trip-add" data-act="add-journey" data-day="${day}">${ICON.plus} New journey</button></div>`;
   }
   if (mode === "occ") {
     const l = schedLeg(f.key); if (!l) return "";
