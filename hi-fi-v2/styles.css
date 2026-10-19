@@ -928,3 +928,25 @@ button.conf-row { display:block; width:calc(100% - 4px); padding:0; border:0; ba
 .eta-t b { font-size:20px; letter-spacing:-.01em; white-space:nowrap; }
 .eta-c { flex:1; min-width:0; display:grid; gap:1px; padding-left:12px; border-left:1px solid var(--line-2); font-size:12.5px; line-height:1.35; }
 .eta-c i { margin-right:5px; }
+/* v4.1 · Haruna: lighter current-step card, automatic progress with location */
+.now-pre { margin:0; color:var(--muted); font-size:13px; }
+.now-pre b { color:var(--ink); }
+.now-top .steps-bar { margin-left:auto; }
+.steps-bar.demo { cursor:pointer; }
+.now-title { margin-top:8px; }
+.now-card .now-sub { margin:4px 0 0; color:var(--ink); font-size:14.5px; }
+.now-card .now-meta { margin:8px 0 0; color:var(--muted); font-size:13.5px; }
+.now-meta b { color:var(--ink); }
+.now-card .btn.full { margin-top:14px; }
+.auto-row { display:flex; align-items:center; gap:6px; margin:12px 0 0; padding-top:10px; border-top:1px solid var(--line-2); color:var(--muted); font-size:12px; }
+.auto-row svg { width:14px; height:14px; flex:none; color:var(--green); stroke:currentColor; fill:none; stroke-width:2; }
+.auto-row .btn.link { margin-left:auto; padding:0; }
+.auto-row.manual { border-top:0; padding-top:0; margin-top:8px; }
+.auto-row.manual .btn.link { margin-left:0; }
+.loc-card { display:flex; gap:12px; width:100%; padding:14px; border:1px solid var(--line); border-radius:var(--radius); background:#fff; text-align:left; font:inherit; color:var(--ink); }
+.loc-card svg { width:20px; height:20px; flex:none; color:var(--accent); stroke:currentColor; fill:none; stroke-width:2; }
+.loc-card strong { display:block; font-size:14px; }
+.loc-card small { display:block; margin-top:3px; color:var(--muted); font-size:12px; line-height:1.4; }
+.loc-card em { display:block; margin-top:6px; color:var(--accent); font-size:12.5px; font-style:normal; font-weight:650; }
+.loc-card + .toggle-card { margin-top:10px; }
+.auto-row .btn.link { white-space:nowrap; }

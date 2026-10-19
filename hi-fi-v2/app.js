@@ -34,6 +34,7 @@ const ICON = {
   chevD: '<svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>',
   x: '<svg viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>',
   edit: '<svg viewBox="0 0 24 24"><path d="M21.17 6.81a2.83 2.83 0 0 0-4-4L3.84 16.17a2 2 0 0 0-.5.83l-1.32 4.35a.5.5 0 0 0 .62.62l4.35-1.32a2 2 0 0 0 .83-.5z"/><path d="m15 5 4 4"/></svg>',
+  pin: '<svg viewBox="0 0 24 24"><path d="M20 10c0 4.99-5.54 10.19-7.4 11.8a1 1 0 0 1-1.2 0C9.54 20.19 4 14.99 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>',
   calendar: '<svg viewBox="0 0 24 24"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>'
 };
 
@@ -205,9 +206,10 @@ const state = {
   prefs: new Set(SEED_PREFS), prefDefault: new Set(SEED_PREFS), prefLevel: { ...SEED_LEVELS }, showMore: false, selected: null, phase: "options", stage: 0, tab: "today", overlay: null,
   jview: "list", schedDay: "wed", occ: clone(SEED_OCC), noCommute: new Set(),
   defaults: clone(DEFAULTS), savedDefaults: clone(DEFAULTS), alertsOn: true, sharing: null, reports: [],
-  today: null, reminder: null, locPerm: null, learn: true, actionable: true, sheet: null, form: {}
+  today: null, reminder: null, locPerm: null, autoTrack: null, permFor: null, learn: true, actionable: true, sheet: null, form: {}
 };
 
+Object.defineProperty(state, "autoTrackOn", { get() { return this.autoTrack !== false; }, set(v) { this.autoTrack = !!v; } });
 /* ---------- derived ---------- */
 function legInfo(key) {
   if (!key) return null;
@@ -628,6 +630,11 @@ function renderProfile() {
       ${toggle("actionable", "Actionable alerts only", "Notify me only when switching or waiting may help")}
       <p class="hint">To mute a single journey, turn off Alerts in its Route details.</p>
     </section>
+    <section class="block">
+      <p class="overline">LOCATION</p>
+      <button class="loc-card" data-act="ios-settings">${ICON.pin}<span><strong>Location access · ${LOC_LABEL[state.locPerm]}</strong><small>Moves your journey forward and powers arrival reminders. Only on this device, only during a journey.</small><em>Change in iOS Settings ›</em></span></button>
+      ${locOk() ? toggle("autoTrackOn", "Update journey steps automatically", "Turn off to tap each step yourself") : ""}
+    </section>
 `;
 }
 
@@ -733,19 +740,27 @@ function renderJourney() {
     switchDiff = `<p class="switch-diff">${ICON.compare}<span>${parts.join(" · ")}</span></p>`;
   }
   const wait = toMin(o.departs) - toMin(state.clock), adv = boardAdvice(o, d), line = o.service.split(" to ")[0];
+  /* v4.1 (Haruna, 19 Oct): the title is the action only; carriage, leave-by and departure sit in small lines.
+     With location on, steps move forward by themselves, so there is no "I'm on the platform" button. */
+  const exitW = adv ? shortPlace(adv.where) : shortPlace(d.to);
   const next = [
-    { t: `Walk to ${o.platform}${adv ? ` · stand near carriage ${adv.car}` : ""}`, s: `${line} departs <b>${o.departs}</b>${wait > 0 ? ` · in ${wait} min` : ""}`, b: "I'm on the platform" },
-    { t: o.mode === "bus" ? "Board the bus" : `Board carriage ${adv ? adv.car : ""}`.trim(), s: adv ? `${adv.mode === "seat" ? `${Math.min(...o.cars) === 1 ? "Best chance of a seat" : "Least crowded"} · exit is near carriage ${adv.exit}` : `Closest to the ${esc(adv.where)} exit`} · departs <b>${o.departs}</b>` : `Whole-bus estimate only · departs <b>${o.departs}</b>`, b: "I've boarded" },
-    { t: `On board · get off at ${shortPlace(o.alight || d.to)}`, s: `Arriving about <b>${o.arrives}</b>${adv ? ` · exit is near carriage ${adv.exit}` : ""}. No action needed unless something changes.`, b: "I've arrived" },
-    { t: `You've arrived at ${d.to}`, s: "Thanks for travelling with Waywise.", b: null }
+    { pre: `Leave by <b>${o.leaveBy}</b>`, t: `Walk to ${o.platform}`, s: adv ? `Stand near <b>carriage ${adv.car}</b>` : "", m: `Departs <b>${o.departs}</b>${wait > 0 ? ` · in ${wait} min` : ""}`, b: "I'm on the platform" },
+    { t: o.mode === "bus" ? "Board the bus" : `Board carriage ${adv ? adv.car : ""}`.trim(), s: adv ? (adv.mode === "seat" ? `${Math.min(...o.cars) === 1 ? "Best chance of a seat" : "Least crowded"} · exit is near carriage ${adv.exit}` : `Closest to the ${esc(exitW)} exit`) : "Whole-bus estimate only", m: `Departs <b>${o.departs}</b>`, b: "I've boarded" },
+    { t: `On board · get off at ${shortPlace(o.alight || d.to)}`, s: adv ? `Exit is near <b>carriage ${adv.exit}</b>` : "", m: `Arriving about <b>${o.arrives}</b>`, b: "I've arrived" },
+    { t: `You've arrived at ${d.to}`, s: "Thanks for travelling with Waywise.", m: "", b: null }
   ][st];
+  const auto = autoOn();
+  const foot = !next.b ? `<button class="btn primary full" data-act="end">End journey</button>`
+    : auto ? `<p class="auto-row">${ICON.pin}<span>Updates automatically by location</span><button class="btn link sm" data-act="track-off">Turn off</button></p>`
+      : `<button class="btn primary full" data-act="advance">${next.b}</button><p class="auto-row manual"><span>Tap each step yourself, or</span><button class="btn link sm" data-act="track-ask">use my location</button></p>`;
   const k = confLine(o, d);
   const liveBody = `
     <article class="now-card">
-      <div class="now-top"><p class="overline">${st < 3 ? `NOW · STEP ${st + 1} OF 4` : "DONE"}</p>
-        <ol class="steps-bar" aria-label="Journey progress">${STAGES.map((s, i) => `<li class="${i < st ? "done" : i === st ? "now" : ""}" title="${s}"><i></i><span>${s.replace("Walk to platform", "Walk")}</span></li>`).join("")}</ol></div>
-      <strong class="now-title">${esc(next.t)}</strong><p class="now-sub">${next.s}</p>
-      ${next.b ? `<button class="btn primary full" data-act="advance">${next.b}</button>` : `<button class="btn primary full" data-act="end">End journey</button>`}</article>
+      <div class="now-top">${next.pre ? `<p class="now-pre">${next.pre}</p>` : "<span></span>"}
+        <ol class="steps-bar${auto && next.b ? " demo" : ""}" aria-label="Journey progress"${auto && next.b ? ` data-act="advance" title="Prototype: simulate moving to the next step"` : ""}>${STAGES.map((s, i) => `<li class="${i < st ? "done" : i === st ? "now" : ""}"><i></i><span>${s.replace("Walk to platform", "Walk")}</span></li>`).join("")}</ol></div>
+      <strong class="now-title">${esc(next.t)}</strong>
+      ${next.s ? `<p class="now-sub">${next.s}</p>` : ""}${next.m ? `<p class="now-meta">${next.m}</p>` : ""}
+      ${foot}</article>
     ${st < 3 ? `<button class="eta-row" data-act="certainty" aria-label="Arrival and how reliable it is"><span class="eta-t"><small>Arrives</small><b>${o.arrives}</b></span><span class="eta-c"><span><i class="c-${k.c.toLowerCase()}"></i><b>${k.c}</b> · ${k.range}</span><span class="cr-say ${k.tone}">${esc(k.say)}</span></span><span class="conf-more">›</span></button>` : ""}
     ${st === 1 || st === 2 ? reminderCard(o, d) : ""}
     ${st < 2 ? `<button class="board-help" data-act="compare" data-mode="board">${ICON.warn}<span><b>Too full to board, or delayed?</b><small>See the next service and other routes with their trade-offs</small></span><i>›</i></button>` : ""}`;
@@ -783,6 +798,10 @@ function renderJourney() {
     ${cta ? `<div class="drawer-foot">${cta}</div>` : ""}`;
   el.querySelector(".drawer-body").scrollTop = keep;
 }
+/* v4.1: automatic progress needs location permission (iOS) and can be turned off in the app. */
+const locOk = () => state.locPerm === "allowed" || state.locPerm === "once";
+const autoOn = () => locOk() && state.autoTrack !== false;
+const LOC_LABEL = { allowed: "While using the app", once: "Ask next time (allowed once)", denied: "Never", null: "Not asked yet" };
 /* Arrival reminder (extra, not in the evaluation list): needs location, falls back to the timetable. */
 function reminderCard(o, d) {
   const at = fmt(arrEnd(o) - 4), r = state.reminder, perm = state.locPerm;
@@ -810,6 +829,12 @@ function closeSheet() { state.sheet = null; $("#backdrop").classList.remove("ope
 function refreshSheet() { if (state.sheet) openSheet(state.sheet.kind, state.sheet.arg, true); }
 
 const SHEETS = {
+  track() {
+    return `<p class="overline">JOURNEY IN PROGRESS</p><h3>Move your journey forward automatically?</h3>
+      <p class="sheet-lede">Waywise can use your location to know when you reach the platform, board and get off, so you don't have to tap each step.</p>
+      <ul class="legend-list"><li>Only on this device, only during a journey</li><li>Shared journeys show progress by stop, never your exact location</li><li>Turn it off any time here or in iOS Settings</li></ul>
+      <div class="sheet-actions"><button class="btn primary full" data-act="track-ask">Use my location</button><button class="btn ghost full" data-act="track-later">Not now, I'll tap each step</button></div>`;
+  },
   prefs() {
     const row = p => { const on = state.prefs.has(p.id), unset = on && !(state.prefLevel[p.id] > 0); return `<button class="pref-row${on ? " on" : ""}" data-act="pref" data-pref="${p.id}" role="checkbox" aria-checked="${on}"><i>${on ? ICON.check : ""}</i><span>${p.label}${unset ? `<small class="pref-note">0 in Profile · counts as 5 today</small>` : ""}</span></button>`; };
     const n = state.prefs.size;
@@ -1010,11 +1035,11 @@ function journeyForm(mode) {
 }
 
 /* Simulated iOS location permission prompt (prototype only). */
-function openPerm() {
-  const d = current();
+function openPerm(forWhat) {
+  const d = current(); state.permFor = forWhat || "reminder";
   $("#perm").innerHTML = `<div class="perm-box" role="alertdialog" aria-labelledby="perm-t">
     <strong id="perm-t">Allow “Waywise” to use your location?</strong>
-    <p>Used on this device to remind you one stop before ${esc(d.to)}. Shared journeys only show progress by stop, never your exact location.</p>
+    <p>${state.permFor === "track" ? "Moves your journey to the next step as you walk, board and get off, and reminds you one stop before your destination." : `Used on this device to remind you one stop before ${esc(d.to)}.`} Only on this device, only during a journey. Shared journeys show progress by stop, never your exact location.</p>
     <button data-act="perm" data-v="always">Allow While Using App</button>
     <button data-act="perm" data-v="once">Allow Once</button>
     <button data-act="perm" data-v="deny">Don't Allow</button></div>`;
@@ -1097,14 +1122,20 @@ const A = {
     if (state.locPerm === "allowed") { state.reminder = "location"; renderJourney(); toast("Arrival reminder on", "Using your location."); return; }
     openPerm();
   },
-  "perm-ask": () => openPerm(),
+  "perm-ask": () => openPerm("reminder"),
+  "track-ask": () => { if (locOk()) { state.autoTrack = true; renderAll(); toast("Automatic updates on", "Using your location."); } else { closeSheet(); openPerm("track"); } },
+  "track-off": () => { state.autoTrack = false; renderAll(); toast("Automatic updates off", "Tap each step yourself. Turn location off completely in iOS Settings."); },
+  "track-later": () => { state.autoTrack = false; closeSheet(); renderAll(); },
+  "ios-settings": () => toast("Opens iOS Settings", "Settings › Waywise › Location: Never, Ask Next Time or While Using the App."),
   perm: b => {
     const v = b.dataset.v; $("#perm").classList.remove("open");
-    if (v === "deny") { state.locPerm = "denied"; state.reminder = "timetable"; toast("Reminder by timetable", "Location is off, so the reminder may be less accurate."); }
-    else { state.locPerm = v === "once" ? "once" : "allowed"; state.reminder = "location"; toast("Arrival reminder on", "Using your location only on this device."); }
+    const track = state.permFor === "track";
+    if (v === "deny") { state.locPerm = "denied"; state.autoTrack = false; if (track) toast("Location is off", "Tap each step yourself. You can change this in iOS Settings."); else { state.reminder = "timetable"; toast("Reminder by timetable", "Location is off, so the reminder may be less accurate."); } }
+    else { state.locPerm = v === "once" ? "once" : "allowed"; state.autoTrack = true; if (track) toast("Automatic updates on", "Your journey moves forward as you travel."); else { state.reminder = "location"; toast("Arrival reminder on", "Using your location only on this device."); } }
+    renderAll();
     renderJourney(); renderMini();
   },
-  start: () => { state.selected = state.preview; state.phase = "active"; state.stage = 0; state.reminder = null; openOverlay("details"); toast("Journey started", state.alertsOn ? "We'll alert you if anything changes." : "Alerts are off for this journey."); },
+  start: () => { state.selected = state.preview; state.phase = "active"; state.stage = 0; state.reminder = null; openOverlay("details"); toast("Journey started", state.alertsOn ? "We'll alert you if anything changes." : "Alerts are off for this journey."); if (state.locPerm === null && state.autoTrack === null) openSheet("track"); },
   "open-active": () => { state.preview = state.selected; openOverlay("details"); },
   advance: () => { state.stage = Math.min(3, state.stage + 1); if (state.stage === 3 && state.sharing?.live && state.sharing.until === "Until I arrive") { state.sharing = null; toast("Sharing stopped", "You've arrived, so arrival updates ended automatically."); } renderAll(); },
   end: () => { const wasSharing = state.sharing?.live; closeSheet(); resetJourneyState(); state.reminder = null; setTab("today"); toast("Journey ended", wasSharing ? "Arrival updates stopped." : ""); },
@@ -1310,6 +1341,10 @@ document.addEventListener("keydown", e => {
   setScenario(S[sc] || sc === "newuser" ? sc : "disruption");
   if (q.get("prefs")) q.get("prefs").split(",").forEach(p => state.prefs.add(p));
   if (q.get("select")) state.preview = q.get("select");
+  /* loc=on|off|ask; screen=active links default to location already allowed */
+  const loc = q.get("loc") || (q.get("screen") === "active" ? "on" : null);
+  if (loc === "on") { state.locPerm = "allowed"; state.autoTrack = true; }
+  else if (loc === "off") { state.locPerm = "denied"; state.autoTrack = false; }
   const screen = q.get("screen");
   if (screen === "schedule") { state.jview = "schedule"; setTab("journeys"); }
   else if (["today", "journeys", "profile"].includes(screen)) setTab(screen);

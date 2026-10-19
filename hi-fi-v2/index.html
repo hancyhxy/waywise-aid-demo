@@ -12,7 +12,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="icons/waywise-180.png">
   <title>Waywise — High-fidelity prototype</title>
-  <link rel="stylesheet" href="styles.css?v=202610191900">
+  <link rel="stylesheet" href="styles.css?v=202610191930">
 </head>
 <body>
   <div class="demo-shell">
@@ -38,6 +38,7 @@
         <ol>
           <li><b>Carriage by exit.</b> Route details › Where to board recommends one carriage: “Board carriage 3 · closest to the Chatswood exit” with Arrive sooner, the least crowded carriage with Prioritise a seat. The journey in progress says “Walk to Platform 16 · stand near carriage 3”.</li>
           <li><b>Journey in progress, simplified.</b> One large card for the current step, arrival and confidence on one line, a small step bar. Route details steps no longer repeat the times shown above them.</li>
+          <li><b>v4.1 (Haruna, 19 Oct).</b> The current-step card shows the action as the title (“Walk to Platform 16”) with “Stand near carriage 3”, Leave by and Departs as small lines. With location allowed, steps move forward by themselves, so there is no “I'm on the platform” button. Start journey asks first (“Move your journey forward automatically?”), then the iOS prompt; Don't Allow or Turn off falls back to tapping each step. Profile › Location shows the access level and links to iOS Settings. Prototype: tap the step bar to simulate moving on.</li>
           <li><b>Confidence in words.</b> “Medium · arrives 18:20–18:27 · still before your 18:30 shift”, shown on the page instead of behind a tap.</li>
         </ol>
       </details>
@@ -123,6 +124,6 @@
       <div class="perm" id="perm"></div>
     </main>
   </div>
-  <script src="app.js?v=202610191900"></script>
+  <script src="app.js?v=202610191930"></script>
 </body>
 </html>
